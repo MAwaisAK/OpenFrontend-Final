@@ -1,0 +1,17 @@
+import AdminBody from "@/components/Admin_Tools";
+export const metadata = {
+  title: "Tools",
+  description: "Tools",
+  openGraph: {
+    title: "Tools - OpEn",
+    description: "Tools",
+    type: "website",
+  },
+};
+export default function Admin() {
+  return (
+    <>
+    <AdminBody/>
+    </>
+  );
+}

@@ -1,0 +1,375 @@
+.userprofile-container {
+max-width: 1250px;
+margin: 30px auto 30px;
+padding: 0 !important;
+width: 90%;
+background-color: #fff;
+box-shadow: 0 3px 6px rgba(0,0,0,0.10), 0 3px 6px rgba(0,0,0,0.10);
+}
+
+.userprofile-header {
+background: #eee;
+background-repeat: no-repeat;
+background-position: center;
+background-size: cover;
+background-color: red;
+height: 250px;
+}
+
+.userprofile-header {
+  position: relative; /* add this */
+  background: #eee;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-color: red;
+  height: 250px;
+}
+
+.userprofile-header .dropdown {
+  position: absolute;
+  top: 20px;
+  right: 20px; /* or your desired spacing from the right edge */
+}
+
+
+
+@media (max-width:800px) {
+.userprofile-header {
+  height: 150px;
+} 
+
+.userprofile-header i {
+  right: -90%;
+}
+}
+
+.userprofile-main {
+    padding: 20px 20px 0px 20px;
+}
+
+.userprofile-left {
+display: flex;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+}
+
+.userprofile-photo {
+width: 200px;
+height: 200px;
+margin-top: -120px;
+border-radius: 100px;
+border: 4px solid #fff;
+}
+
+.userprofile-active {
+width: 20px;
+height: 20px;
+border-radius: 20px;
+position: relative;
+right: calc(50% - 70px);
+top: 75px;
+background-color: #FFC107;
+border: 3px solid #fff;
+}
+
+@media (max-width:990px) {
+.userprofile-active {
+  right: calc(50% - 60px);
+  top: 50px;
+} 
+}
+
+.userprofile-name {
+margin-top: 20px;
+font-family: "Open Sans";
+font-weight: 600;
+font-size: 18pt;
+color: #777;
+}
+
+.userprofile-info {
+margin-top: -5px;
+margin-bottom: 5px;
+font-family: 'Montserrat', sans-serif;
+font-size: 11pt;
+color: #aaa;
+}
+
+.userprofile-stats {
+margin-top: 25px;
+text-align: center;
+padding-bottom: 20px;
+border-bottom: 1px solid #ededed;
+font-family: 'Montserrat', sans-serif;
+}
+
+.userprofile-number-stat {
+padding: 0px;
+font-size: 14pt;
+font-weight: bold;
+font-family: 'Montserrat', sans-serif;
+color: #aaa;
+}
+
+.userprofile-desc-stat {
+margin-top: -15px;
+font-size: 10pt;
+color: #bbb;
+}
+
+.userprofile-desc {
+text-align: center;
+margin-top: 25px;
+margin: 25px 40px;
+color: #999;
+font-size: 11pt;
+font-family: "Open Sans";
+padding-bottom: 25px;
+border-bottom: 1px solid #ededed;
+}
+
+.userprofile-social {
+margin: 5px 0 12px 0;
+text-align: center;
+display: inline-block;
+font-size: 20pt;
+}
+
+.userprofile-social i {
+cursor: pointer;
+margin: 0 15px;
+}
+
+.userprofile-social i:nth-child(1)  { color: #4267b2; }
+.userprofile-social i:nth-child(2)  { color: #1da1f2; }
+.userprofile-social i:nth-child(3)  { color: #bd081c; }
+.userprofile-social i:nth-child(4)  { color: #36465d; }
+
+.userprofile-right {
+padding: 0 25px 0 25px !important;
+}
+
+.userprofile-nav {
+display: inline-flex;
+}
+
+.userprofile-nav li {
+margin: 40px 30px 0 10px;
+cursor: pointer;
+font-size: 13pt;
+text-transform: uppercase;
+font-family: 'Montserrat', sans-serif;
+font-weight: 500;
+color: #888;
+}
+
+@media (max-width: 990px) {
+  .userprofile-nav {
+    gap: 30px; /* Increase spacing between tabs */
+  }
+
+  .userprofile-nav li {
+    font-size: 12pt; /* Slightly smaller font */
+  }
+}
+
+
+
+.userprofile-follow {
+  position: absolute;
+  right: 8%;
+  top: 35px;
+  font-size: 11pt;
+  background-color: #42b1fa;
+  color: #fff;
+  padding: 8px 15px;
+  cursor: pointer;
+  transition: all .4s;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  }
+
+/* Hide the mobile button by default */
+.userprofile-follow-mobile {
+  display: none;
+  text-align: center;
+  font-size: 11pt;
+  background-color: #42b1fa;
+  color: #fff;
+  padding: 8px 15px;
+  cursor: pointer;
+  transition: all 0.4s;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+}
+
+/* Hide the desktop button on small screens */
+@media (max-width: 990px) {
+  .userprofile-follow {
+      display: none;
+  }
+
+  .userprofile-follow-mobile {
+      display: block;
+  }
+}
+
+/* Styling for active tab */
+.userprofile-nav li {
+  cursor: pointer;
+  list-style-type: none;
+}
+
+.userprofile-nav li.active {
+  color: #000;
+  font-weight: bold;
+  border-bottom: 2px solid #000;
+}
+
+/* Hide the list styles */
+.tribe-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tribe-list li {
+  padding: 5px 0;
+  font-size: 14pt;
+  color: #555;
+}
+
+/* About Info Styling */
+.about-info p {
+  font-size: 12pt;
+  color: #777;
+  margin: 5px 0;
+}
+
+.userprofile-follow:hover {
+box-shadow: 0 0 15px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.2);
+}
+
+@media (max-width: 990px) {
+  .userprofile-nav {
+    display: flex; /* Ensure it's displayed */
+    justify-content: center; /* Center it */
+    position: relative;
+    margin-top: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ededed;
+  }
+
+  .userprofile-nav li.active {
+    color: #000 !important;
+    font-weight: bold !important;
+    border-bottom: 2px solid #000 !important;
+  }
+  
+
+  .userprofile-nav li {
+    margin: 10px;
+    font-size: 12pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: #888;
+  }
+}
+
+
+.userprofile-gallery  {
+margin-top: 35px;
+}
+
+.userprofile-gallery div {
+margin-bottom: 30px;
+}
+
+.userprofile-gallery img {
+box-shadow: 0 3px 6px rgba(0,0,0,0.10), 0 3px 6px rgba(0,0,0,0.10);
+width: auto; 
+height: auto;
+cursor: pointer;
+max-width: 100%;
+}
+
+.tribe-thumbnail {
+  margin-right: 15px;
+}
+
+.tribe-thumbnail-img {
+  width: 40px; /* Adjust size to make it smaller */
+  height: 40px; /* Adjust size to make it smaller */
+  border-radius: 50%; /* Makes the image circular */
+  object-fit: cover; /* Ensures the image covers the entire circle */
+  max-width: 100%; /* Ensures responsiveness */
+  height: auto; /* Adjusts the height based on the width */
+}
+
+.tribe-item {
+  display: flex;
+  align-items: center; /* Align thumbnail and title in the same line */
+  margin-bottom: 5px;
+}
+
+.tribe-thumbnail {
+  margin-right: 15px; /* Space between thumbnail and title */
+}
+
+.tribe-thumbnail-img {
+  width: 40px; /* Adjust size to make it smaller */
+  height: 40px; /* Adjust size to make it smaller */
+  border-radius: 50%; /* Makes the image circular */
+  object-fit: cover; /* Ensures the image covers the entire circle */
+}
+
+.tribe-info {
+  display: flex;
+  flex-direction: column; /* Stack title and category vertically */
+}
+
+.tribe-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 5px; /* Space between title and category */
+}
+
+.tribe-category {
+  font-size: 14px;
+  color: #777; /* Lighter color for category */
+}
+
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: -100px;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  padding: 8px 0;
+  display: block;
+  z-index: 999; /* ensure it’s on top of other elements */
+}
+.userprofile-header .dropdown i {
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+
+.dropdown-menu li {
+  padding: 8px 15px;
+  cursor: pointer;
+}
+
+.dropdown-menu li:hover {
+  background-color: #f0f0f0;
+}
+

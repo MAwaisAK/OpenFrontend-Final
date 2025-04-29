@@ -1,0 +1,415 @@
+/* Define CSS variables for the dark theme */
+.--dark-theme {
+  --chat-background: white;
+  --chat-panel-background:white;
+  --chat-bubble-background: #215496;
+  --chat-add-button-background: #212324;
+  --chat-send-button-background: #215496;
+  --chat-text-color: white;
+  --chat-options-svg: #a3a3a3;
+}
+
+/* Chat container styles - fixed size and responsive */
+#chat {
+  display: flex;              /* Flex container */
+  flex-direction: column;     /* Column layout */
+  height: 80vh;               /* Fixed or 'calc(100vh - someOffset)' if you prefer */
+  width: 600px;
+  max-width: 100%;
+  margin: 25px auto;
+  box-sizing: border-box;
+  padding: 1em;
+  border-radius: 12px;
+  border: 2px solid #215496 ;    /* White border around chat */
+  background: var(--chat-background);
+  /* IMPORTANT: Remove 'overflow: hidden;' so children can scroll */
+}
+
+#chat::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+/* Button icon styles */
+.btn-icon {
+  position: relative;
+  cursor: pointer;
+  color:white;
+}
+
+.btn-icon svg {
+  stroke: #FFF;
+  fill: #FFF;
+  width: 50%;
+  height: auto;
+  /* Centering mixin applied inline */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Chat conversation board styles */
+.chat__conversation-board {
+  flex: 1;                   
+  display: flex;
+  flex-direction: column; /* New messages appear at the bottom */
+  justify-content: flex-start;    
+  overflow-y: auto;           
+  padding-right: 0.5em;       
+  overflow-anchor: auto; /* Helps keep the scroll at the bottom */
+}
+
+/* Maintain spacing between messages */
+.chat__conversation-board__message-container:not(:last-child) {
+  margin-bottom: 1em;
+}
+
+
+
+/* Message container styles */
+.chat__conversation-board__message-container {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+}
+
+.chat__conversation-board__message-container:not(:last-child) {
+  margin: 0 0 2em 0;
+}
+
+.chat__conversation-board__message-container:hover .chat__conversation-board__message__options {
+  display: flex;
+  align-items: center;
+}
+
+.chat__conversation-board__message-container:hover .option-item:not(:last-child) {
+  margin: 0 0.5em 0 0;
+}
+
+/* Reversed message container for user messages */
+.chat__conversation-board__message-container.reversed {
+  flex-direction: row-reverse;
+}
+
+.chat__conversation-board__message-container.reversed .chat__conversation-board__message__bubble {
+  position: relative;
+}
+
+.chat__conversation-board__message-container.reversed .chat__conversation-board__message__bubble span:not(:last-child) {
+  margin: 0 0 2em 0;
+}
+
+.chat__conversation-board__message-container.reversed .chat__conversation-board__message__person {
+  margin: 0 0 0 1.2em;
+}
+
+.chat__conversation-board__message-container.reversed .chat__conversation-board__message__options {
+  align-self: center;
+  position: absolute;
+  left: 0;
+  display: none;
+}
+
+/* Message person styles */
+.chat__conversation-board__message__person {
+  text-align: center;
+  margin: 0 1.2em 0 0;
+}
+
+.chat__conversation-board__message__person__avatar {
+  height: 35px;
+  width: 35px;
+  overflow: hidden;
+  border-radius: 50%;
+  user-select: none;
+  -ms-user-select: none;
+  position: relative;
+}
+
+.chat__conversation-board__message__person__avatar::before {
+  content: "";
+  position: absolute;
+  height: 100%;
+  width: 100%;
+}
+
+.chat__conversation-board__message__person__avatar img {
+  height: 100%;
+  width: auto;
+}
+
+.chat__conversation-board__message__person__nickname {
+  font-size: 9px;
+  color: #484848;
+  user-select: none;
+  display: none;
+}
+
+/* Message context styles */
+.chat__conversation-board__message__context {
+  max-width: 55%;
+  align-self: flex-end;
+}
+
+.sender-img{
+  background-color: white;
+}
+
+/* Message options styles */
+.chat__conversation-board__message__options {
+  align-self: center;
+  position: absolute;
+  right: 0;
+  display: none;
+}
+
+.chat__conversation-board__message__options .option-item {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  height: 16px;
+  width: 16px;
+  outline: none;
+}
+
+.chat__conversation-board__message__options .emoji-button svg,
+.chat__conversation-board__message__options .more-button svg {
+  stroke: var(--chat-options-svg);
+  fill: transparent;
+  width: 100%;
+}
+
+/* Message bubble styles with white border and pointer */
+.chat__conversation-board__message__bubble {
+  position: relative;
+}
+
+.chat__conversation-board__message__bubble span {
+  width: fit-content;
+  display: inline-table;
+  word-wrap: break-word;
+  background: var(--chat-bubble-background);
+  font-size: 16px;  /* Increased font size */
+  color: var(--chat-text-color);
+  padding: 0.5em 0.8em;
+  line-height: 1.5;
+  border-radius: 6px;
+  font-family: 'Lato', sans-serif;
+  text-align: left; /* Default alignment for bot messages */
+}
+
+/* Pointer for bot messages (non-reversed) */
+.chat__conversation-board__message-container:not(.reversed) .chat__conversation-board__message__bubble::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: -10px;
+  border-width: 10px 10px 10px 0;
+  border-style: solid;
+  border-color: transparent #32afb5  transparent transparent;
+}
+
+/* Pointer for user messages (reversed) */
+.chat__conversation-board__message-container.reversed .chat__conversation-board__message__bubble::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: -10px;
+  border-width: 10px 0 10px 10px;
+  border-style: solid;
+  border-color: transparent transparent transparent #32afb5;
+}
+
+/* Align user messages (reversed) text to right */
+.chat__conversation-board__message-container.reversed .chat__conversation-board__message__bubble span {
+  text-align: right;
+}
+
+.chat__conversation-board__message__bubble span:not(:last-child) {
+  margin: 0 0 0.3em;
+}
+
+.chat__conversation-board__message__bubble:active {
+  background: var(--chat-bubble-active-background);
+}
+
+/* Conversation panel styles */
+.chat__conversation-panel {
+  background: var(--chat-panel-background);
+  border-radius: 12px;
+  border: 2px solid #215496;
+  padding: 0 1em;
+  height: 55px;
+  margin: 0.5em 0 0;
+}
+
+.chat__conversation-panel__container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 100%;
+}
+
+.chat__conversation-panel__container .panel-item:not(:last-child) {
+  margin: 0 1em 0 0;
+}
+
+.chat__conversation-panel__container .chat__conversation-panel__button {
+  background: grey;
+  height: 20px;
+  width: 30px;
+  border: 0;
+  padding: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Add file button styles */
+.chat__conversation-panel__container .add-file-button {
+  height: 23px;
+  min-width: 23px;
+  width: 23px;
+  background: var(--chat-add-button-background);
+  border-radius: 50%;
+}
+
+.chat__conversation-panel__container .add-file-button svg {
+  width: 70%;
+  stroke: #54575c;
+}
+
+/* Emoji button styles */
+.chat__conversation-panel__container .emoji-button {
+  min-width: 23px;
+  width: 23px;
+  height: 23px;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.chat__conversation-panel__container .emoji-button svg {
+  width: 100%;
+  fill: transparent;
+  stroke: #54575c;
+}
+
+/* Send message button styles */
+.chat__conversation-panel__container .send-message-button {
+  background: var(--chat-send-button-background);
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
+  transition: 0.3s ease;
+}
+
+.chat__conversation-panel__container .send-message-button:active {
+  transform: scale(0.97);
+}
+
+.chat__conversation-panel__container .send-message-button svg {
+  margin: 1px -1px;
+}
+
+/* Conversation panel input styles */
+.chat__conversation-panel__input {
+  width: 100%;
+  height: 100%;
+  outline: none;
+  position: relative;
+  color: black;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  font-family: 'Lato', sans-serif;
+  resize: none;
+}
+
+
+
+.tokens-display {
+  display: flex;
+  justify-content: flex-end; /* Aligns to the right */
+  align-items: center; /* Centers vertically */
+  gap: 5px; /* Space between image and text */
+  font-size: 14px;
+  font-family: "Poppins", sans-serif; /* Apply Poppins font */
+  color: #215496;
+  margin-right: 10px;
+  font-style: italic;
+  flex-wrap: wrap; /* Ensures wrapping on smaller screens */
+}
+
+/* Adjust the icon size and text spacing for smaller screens */
+.tokens-icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tokens-display {
+    justify-content: center; /* Center align on smaller screens */
+    font-size: 12px; /* Decrease font size */
+    gap: 5px; /* Reduce space between image and text */
+  }
+  
+  .tokens-icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tokens-display {
+    flex-direction: column; /* Stack text below the image */
+    align-items: center;
+    font-size: 12px;
+    gap: 3px;
+  }
+
+  .tokens-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.tokens-display a {
+   color: #215496;
+  text-decoration: none;
+}
+
+
+
+
+/* Media queries for responsiveness */
+@media only screen and (max-width: 600px) {
+  /* Adjust mobile styles so the complete chat box appears in a single page and content is bottom aligned */
+  #chat {
+    margin: 5px;
+    border-radius: 5px;
+    width: calc(100% - 10px);
+    height: 90vh;  /* Set a fixed height of 90vh for mobile */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Make the conversation board fill the available space and bottom-align its content */
+  #chat .chat__conversation-board {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow-y: visible;  /* Disable internal scrolling */
+  }
+  
+  #chat .chat__conversation-board__message__options {
+    display: none !important;
+  }
+}

@@ -1,0 +1,294 @@
+.container {
+  display: flex;
+  min-height: 100vh;
+  background: #ffffff;
+  box-sizing: border-box;
+  gap: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Card 1 - Modern Minimal */
+.profile-card.minimal {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  width: 300px;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+.profile-card.minimal:hover {
+  transform: translateY(-5px);
+}
+
+.profile-card.minimal .card-header {
+  background: #64a1e7;
+  height: 120px;
+  position: relative;
+}
+
+.profile-card.minimal .profile-img {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -50px;
+}
+
+.profile-card.minimal .profile-img img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 5px solid white;
+  object-fit: cover;
+}
+
+.profile-card.minimal .card-body {
+  padding: 60px 20px 20px;
+  text-align: center;
+}
+
+.profile-card.minimal .name {
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.profile-card.minimal .title {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.profile-card.minimal .bio {
+  color: #777;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.profile-card.minimal .social-links {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.profile-card.minimal .social-links a {
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+.profile-card.minimal .social-links a:hover {
+  color: #4a90e2;
+}
+
+.profile-card.minimal .connect-btn {
+  background: #4a90e2;
+  color: white;
+  border: none;
+  padding: 10px 30px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.profile-card.minimal .connect-btn:hover {
+  background: #75b2f0;
+}
+
+
+.profile-card-tool.minimal {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  width: 300px;
+  overflow: visible;
+  transition: transform 0.3s ease;
+}
+
+.profile-card-tool.minimal:hover {
+  transform: translateY(-5px);
+}
+
+.profile-card-tool.minimal .card-header {
+  position: relative;
+}
+
+.profile-card-tool.minimal .profile-img {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -50px;
+}
+
+.profile-card-tool.minimal .profile-img img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 5px solid white;
+  object-fit: cover;
+}
+
+.profile-card-tool.minimal .card-body {
+  padding: 60px 20px 20px;
+  text-align: center;
+}
+
+.profile-card-tool.minimal .name {
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.profile-card-tool.minimal .title {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.profile-card-tool.minimal .bio {
+  color: #777;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.profile-card-tool.minimal .social-links {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.profile-card-tool.minimal .social-links a {
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+.profile-card-tool.minimal .social-links a:hover {
+  color: #4a90e2;
+}
+
+.profile-card-tool.minimal .connect-btn {
+  background: #4a90e2;
+  color: white;
+  border: none;
+  padding: 10px 30px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.profile-card-tool.minimal .connect-btn:hover {
+  background: #75b2f0;
+}
+
+/* Card 3 - Glass Morphism */
+.profile-card.glass {
+  width: 300px;
+  height: 400px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card.glass .blur-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+}
+
+.profile-card.glass .card-content {
+  position: relative;
+  padding: 30px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-card.glass .profile-image {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.profile-card.glass .profile-image img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.profile-card.glass .online-status {
+  width: 15px;
+  height: 15px;
+  background: #4cd137;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  border: 2px solid white;
+}
+
+.profile-card.glass .info {
+  text-align: center;
+}
+
+.profile-card.glass h3 {
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.profile-card.glass .title {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+.profile-card.glass .tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.profile-card.glass .tags span {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 5px 15px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  color: #333;
+}
+
+.profile-card.glass .social-icons {
+  display: flex;
+  gap: 15px;
+}
+
+.profile-card.glass .icon {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  text-decoration: none;
+  transition: transform 0.3s ease;
+}
+
+.profile-card.glass .icon:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.3);
+}

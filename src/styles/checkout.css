@@ -1,0 +1,137 @@
+.check-card {
+  background: #16181a !important;
+  border-radius: 14px !important;
+  max-width: 350px !important;
+  display: block !important;
+  margin: auto !important;
+  padding: 60px 20px !important;
+  box-shadow: 2px 10px 40px black !important;
+  z-index: 99 !important;
+  position: relative !important;
+}
+
+.check-logo-card {
+  max-width: 50px !important;
+  margin-bottom: 15px !important;
+  margin-top: -19px !important;
+}
+
+.check-card label {
+  display: flex !important;
+  font-size: 10px !important;
+  color: white !important;
+  opacity: 0.4 !important;
+}
+
+.check-input {
+  font-family: 'Work Sans', sans-serif !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid transparent !important;
+  color: #dbdce0 !important;
+  transition: border-bottom 0.4s !important;
+}
+
+.check-input:focus {
+  border-bottom: 1px solid #1abc9c !important;
+  outline: none !important;
+}
+
+.check-cardnumber {
+  display: block !important;
+  font-size: 20px !important;
+  margin-bottom: 8px !important;
+}
+
+.check-name {
+  display: block !important;
+  font-size: 15px !important;
+  max-width: 200px !important;
+  float: left !important;
+  margin-bottom: 15px !important;
+}
+
+.check-toleft {
+  float: left !important;
+  margin-top: 5px !important;
+}
+.check-toleft-exp {
+  
+  margin-top: 15px !important;
+}
+.check-ccv {
+  width: 50px !important;
+  font-size: 15px !important;
+}
+.check-exp {
+  width: 50px !important;
+  font-size: 15px !important;
+}
+.check-receipt {
+  background: #dbdce0 !important;
+  border-radius: 4px !important;
+  padding: 5% !important;
+  padding-top: 200px !important;
+  max-width: 600px !important;
+  display: block !important;
+  margin: auto !important;
+  margin-top: -180px !important;
+  z-index: -999 !important;
+  position: relative !important;
+}
+
+.check-col {
+  width: 50% !important;
+  float: left !important;
+}
+
+.check-cost, .check-seller {
+  color: #3a7bd5 !important;
+}
+
+.check-description {
+  font-size: 13px !important;
+}
+
+.check-price {
+  font-size: 12px !important;
+}
+
+.check-comprobe {
+  text-align: center !important;
+}
+
+.check-proceed {
+  position: absolute !important;
+  transform: translate(300px, 10px) !important;
+  width: 50px !important;
+  height: 50px !important;
+  border-radius: 50% !important;
+  background: #1abc9c !important;
+  border: none !important;
+  color: white !important;
+  transition: box-shadow 0.2s, transform 0.4s !important;
+  cursor: pointer !important;
+}
+
+.check-proceed:focus {
+  outline: none !important;
+  box-shadow: inset 0px 0px 5px white !important;
+}
+
+.check-sendicon {
+  filter: invert(100%) !important;
+  padding-top: 2px !important;
+}
+
+@media (max-width: 600px) {
+  .check-proceed {
+      transform: translate(250px, 10px) !important;
+  }
+  .check-col {
+      display: block !important;
+      margin: auto !important;
+      width: 100% !important;
+      text-align: center !important;
+  }
+}

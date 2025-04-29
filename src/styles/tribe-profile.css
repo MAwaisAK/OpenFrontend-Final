@@ -1,0 +1,215 @@
+body {
+    margin-top: 20px;
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+}
+
+.tribers-container {
+    width: 80%;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+.tribers-profile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.tribers-profile:last-child {
+    border-bottom: none;
+}
+
+.tribers-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+
+.tribers-user-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.tribers-user-name {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #333;
+}
+
+.tribers-user-role {
+font-size: 0.9em;
+color: #777;
+display: block; /* Moves the role to a new line */
+margin-left: 0; /* Removes the left margin */
+margin-top: 3px; /* Adds spacing between name and role */
+}
+
+.tribers-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.tribers-actions a {
+    color: #555;
+    text-decoration: none;
+    font-size: 1.2em;
+    transition: color 0.2s;
+}
+
+.tribers-actions a:hover {
+    color: #2bb6a3;
+}
+
+.tribers-delete {
+    color: #fe635f;
+}
+
+.tribers-delete:hover {
+    color: #dd504c;
+}
+
+.tribers-pagination {
+    display: flex;
+    justify-content: center;
+    list-style: none;
+    padding: 20px 0;
+}
+
+.tribers-pagination li {
+    margin: 0 5px;
+}
+
+.tribers-pagination a {
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    background: #eee;
+    color: #333;
+    transition: background 0.2s;
+}
+
+.tribers-pagination a:hover {
+    background: #2bb6a3;
+    color: #fff;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 350px;
+    text-align: center;
+  }
+  
+  .modal-buttons {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+  }
+  
+  .modal-buttons button {
+    padding: 8px 15px;
+    cursor: pointer;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+  }
+  
+  .modal-buttons button:first-child {
+    background-color: gray;
+  }
+  
+  /* Center the tab container */
+.tab-container {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  /* Style the tab list */
+  .tab-list {
+    list-style: none;
+    padding: 0;
+    display: inline-flex;
+    border-bottom: 2px solid #ccc;
+  }
+  
+  /* Style each tab item */
+  .tab-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    margin: 0 5px;
+    font-size: 16px;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+  }
+  
+  /* Active tab styling */
+  .tab-item.active {
+    border-bottom: 2px solid white;
+    color: #32afb5;
+    font-weight: bold;
+  }
+  
+  /* Hover state */
+  .tab-item:hover {
+    color: #32afb5;
+  }
+  
+  .triber-search-bar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    background: #fff;
+    padding: 5px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+  }
+  
+  .triber-search-bar input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .triber-search-bar button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+  }
+  
+  .triber-search-bar button i {
+    font-size: 18px;
+    color: #555;
+  }
+  
+  .triber-search-results {
+    margin-top: 10px;
+    background: #f9f9f9;
+    padding: 10px;
+    border-radius: 10px;
+  }
+  
