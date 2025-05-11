@@ -1,6 +1,17 @@
 import * as yup from "yup";
 
 const validations = yup.object().shape({
+  firstName: yup
+  .string()
+  .required("First name is required")
+  .min(2, "First name must be at least 2 characters long")
+  .max(50, "First name must not exceed 50 characters"),
+
+lastName: yup
+  .string()
+  .required("Last name is required")
+  .min(2, "Last name must be at least 2 characters long")
+  .max(50, "Last name must not exceed 50 characters"),
   email: yup.string().email("Please enter a valid email").required("This field is required"),
   password: yup
     .string()

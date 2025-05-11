@@ -18,7 +18,6 @@ const UserPrompts = () => {
     const getPrompts = async () => {
       try {
         const data = await fetchUserPrompts();
-        console.log(data.data);
         setPrompts(data.data);
       } catch (error) {
         console.error("Error fetching user prompts:", error);

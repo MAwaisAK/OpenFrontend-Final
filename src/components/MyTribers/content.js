@@ -208,7 +208,6 @@ const UserList = () => {
       setBlockedUsers((prevUsers) =>
         prevUsers.filter((u) => getUserId(u) !== getUserId(user))
       );
-      console.log(`${user.username} has been unblocked.`);
     } catch (error) {
       console.error("Error unblocking user:", error);
     }

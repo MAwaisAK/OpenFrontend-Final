@@ -46,7 +46,6 @@ const AdminBody = () => {
     async function fetchInitialData() {
       try {
         const tribers = await fetchRandomTribers();
-        console.log(tribers.randomTribers);
         setFellowTribers(tribers.randomTribers);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -70,7 +69,6 @@ const AdminBody = () => {
           fetchRandomTools(),
           fetchRandomCourses(),
         ]);
-        console.log(totalToolsData);
         setTopTribes(topTribesData?.topTribes || []);
         setTotalTools(totalToolsData.totalTools || 0);
         setRandomTools(randomToolsData.randomTools || []);
@@ -129,7 +127,6 @@ useEffect(() => {
         (tribe) => !blockedTribes.has(tribe._id?.toString())
       );
 
-      console.log("Total joined tribes (excluding blocked):", validTribes.length);
       setTotalMyTribes(validTribes.length);
       setLifttokens(userData?.tokens || 0);
     } catch (error) {
@@ -141,7 +138,6 @@ useEffect(() => {
     try {
       const userData = await fetchMe();
       const courses = userData?.courses || [];
-      console.log("Total courses:", courses.length);
       setTotalCourses(courses.length);
     } catch (error) {
       console.error("Error fetching user courses:", error);
@@ -254,7 +250,7 @@ useEffect(() => {
                 <div
   className="card-people mt-auto"
   style={{
-    backgroundImage: `url(${dashboardImage})`,
+    backgroundImage: `url(${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${dashboardImage})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     backgroundRepeat: "no-repeat",
@@ -552,45 +548,20 @@ useEffect(() => {
           </a>
         </div>
       </div>
-      <div className="col-md-12 grid-margin stretch-card">
-        <div className="card data-icon-card-primary">
-        <a href="/profile/user-tribes" style={{ all: "unset", cursor: "pointer" }}>
-          <div className="card-body">
-            <p className="card-title text-white">My Tribes</p>
-            <div className="row">
-              <div className="col-8 text-white">
-                <h3>{totalMyTribes}</h3>
-                <p className="text-white font-weight-500 mb-0">
-            Check out for something new in your tribes. <i className="mdi mdi-arrow-right text-white" />
-          </p>
-        </div>
-        <div className="col-4 d-flex align-items-center justify-content-center">
-            <i className="mdi mdi-account-multiple text-white" style={{ fontSize: "50px" }} />
-          </div>
-            </div>
-          </div>
-          </a>
+<div className="col-md-12 grid-margin stretch-card">
+    <a href="/profile/lift-ai" style={{ all: "unset", cursor: "pointer" }}>
+      <div className="card-body d-flex">
+        <div className="col-4 p-0 h-100">
+          <img src="assets/img/Lift.jpg" alt="Lift AI" style={{ width: "350px", height: "200px", borderRadius:"10px" }} />
         </div>
       </div>
-      <div className="col-md-12 grid-margin stretch-card">
-        <div className="card data-icon-card-primary">
-        <a href="/profile/mytribers" style={{ all: "unset", cursor: "pointer" }}>
-          <div className="card-body">
-            <p className="card-title text-white">My Tribers</p>
-            <div className="row">
-              <div className="col-8 text-white">
-                <p className="text-white font-weight-500 mb-0">
-                Check Out Your Tribers for Any Details <i className="mdi mdi-arrow-right text-white" />
-                </p>
-              </div>
-              <div className="col-4 d-flex align-items-center justify-content-center">
-          <i className="ti-user icon-lg text-white" />
-        </div>
-            </div>
-          </div>
-          </a>
-        </div>
-      </div>
+    </a>
+</div>
+
+
+
+
+
      
     </div>
   </div>

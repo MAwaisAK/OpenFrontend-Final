@@ -16,7 +16,6 @@ const Sidebar = () => {
     async function loadProfile() {
       try {
         const userData = await fetchMe();
-        console.log("Fetched user:", userData); // ← logs exactly what came back
         setMe(userData);                        // ← store that full object
       } catch (err) {
         console.error("Failed to fetch profile:", err);
@@ -29,7 +28,6 @@ const Sidebar = () => {
 
   // 2) Log state whenever it actually updates
   useEffect(() => {
-    console.log("State me is now:", me);
   }, [me]);
   
 
@@ -222,11 +220,11 @@ const Sidebar = () => {
               <span>Manage AI</span>
             </a>
             <a
-              href="/admin/opulententrepreneurs/open/userprompts"
+              href="/admin/opulententrepreneurs/open/usertokens"
               className="nav-link"
             >
               <i data-feather="cpu" />
-              <span>Prompts</span>
+              <span>Tokens</span>
             </a>
           </li>
 
@@ -266,6 +264,8 @@ const Sidebar = () => {
               <span>Sign Out</span>
             </Link>
           </li>
+          <li className="menu-header">----</li>
+          <li className="menu-header">----</li>
         </ul>
       </aside>
     </div>

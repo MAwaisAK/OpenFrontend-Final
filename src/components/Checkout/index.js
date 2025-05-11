@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useRef } from "react";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import { fetchMe, fetchBasicPremiumPricing } from "@/app/api";
@@ -9,6 +9,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import "../../styles/checkout.css";
 import Sidebar from "../AdminSideBar";
 import Navbar from "../Nav";
+import 'bootstrap/dist/js/bootstrap.bundle.min'; // ensure bootstrap JS is loaded
 
 const PaymentCard = () => {
   const stripe = useStripe();
@@ -27,6 +28,13 @@ const PaymentCard = () => {
   const [userData, setUserData] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const successToastRef = useRef(null);
+
+const showToast = (ref) => {
+const toast = new bootstrap.Toast(ref.current);
+toast.show();
+};
+
 
   // Fetch user data on mount.
   useEffect(() => {
@@ -77,7 +85,6 @@ const PaymentCard = () => {
   // Handler for billing period change (only for basic/premium).
   const handlePeriodChange = (e) => {
     const selectedPeriod = e.target.value;
-    console.log("Period changed to:", selectedPeriod);
     setPeriod(selectedPeriod);
   };
 
@@ -142,6 +149,8 @@ const PaymentCard = () => {
   useEffect(() => {
     if (confirmed) {
       alert("Payment Successful!");
+      successToastRef.current.querySelector(".toast-body").innerText = "Payment Successful!";
+showToast(successToastRef);
       window.location.href = "/profile";
     }
   }, [confirmed]);
@@ -236,6 +245,23 @@ const PaymentCard = () => {
           </div>
         </div>
       </div>
+      <div
+ref={successToastRef}
+className="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-4"
+role="alert"
+aria-live="assertive"
+aria-atomic="true"
+>
+<div className="d-flex">
+<div className="toast-body">Action succeeded.</div>
+<button
+type="button"
+className="btn-close btn-close-white me-2 m-auto"
+data-bs-dismiss="toast"
+aria-label="Close"
+></button>
+</div>
+</div>
     </>
   );
 };

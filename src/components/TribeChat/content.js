@@ -15,6 +15,30 @@ import { useParams, useRouter } from "next/navigation";
 const BASE_ENDPOINT = process.env.NEXT_PUBLIC_BASE_ENDPOINT;
 const SOCKET_ENDPOINT =
 process.env.NEXT_PUBLIC_BASE_ENDPOINT_SOCKET;
+// Date separator component
+const DateSeparator = ({ label }) => (
+  <div style={{ textAlign: 'center', margin: '10px 0' }}>
+    <span
+      style={{
+        background: '#e0e0e0',
+        padding: '4px 12px',
+        borderRadius: '12px',
+        fontSize: '0.8em',
+        color: '#555',
+      }}
+    >
+      {label}
+    </span>
+  </div>
+);
+
+// Get human-friendly date
+const getDateLabel = (timestamp) => {
+  const msgDate = moment(timestamp);
+  if (msgDate.isSame(moment(), 'day')) return 'Today';
+  if (msgDate.isSame(moment().subtract(1, 'day'), 'day')) return 'Yesterday';
+  return msgDate.format('MMMM D, YYYY');
+};
 export default function ChatAppMerged() {
   const router = useRouter(); 
   const [authUser, setAuthUser] = useState(null);
@@ -30,6 +54,8 @@ export default function ChatAppMerged() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const chatContentRef = useRef(null);
+      const [page, setPage] = useState(0);
+      const [hasMore, setHasMore]   = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const params = useParams();
@@ -151,7 +177,6 @@ export default function ChatAppMerged() {
       // Use new tribe-specific events
       socketConnection.on("connect", () => {
         socketConnection.emit("join", credentials, (err) => {
-          if (err) alert(err);
         });
       });
 
@@ -174,7 +199,6 @@ export default function ChatAppMerged() {
       });
 
       socketConnection.on("tribeMessageDeleted", ({ messageId }) => {
-        console.log("🔴 tribeMessageDeleted received:", messageId);
         setChats(prev => prev.filter(chat => chat.id !== messageId));
       });
 
@@ -239,16 +263,20 @@ export default function ChatAppMerged() {
     if (credentials.room) {
       const fetchChatMessages = async () => {
         try {
+                const el = chatContentRef.current;
+      let previousHeight = 0;
+      if (el && page > 0) previousHeight = el.scrollHeight;
+
           setIsLoading(true);
-          const res = await axios.get(
-            `${BASE_ENDPOINT}/my-tribes/tribe-messages/${credentials.room}`,
+          const { data } = await axios.get(
+            `${BASE_ENDPOINT}/my-tribes/tribe-messages/${credentials.room}?page=${page}`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("access-token")}`,
               },
             }
           );
-          const msgs = res.data.map((msg) => ({
+          const msgs = data.messages.map((msg) => ({
             id: msg._id,
             text: msg.message,
             from: msg.sender.username || msg.sender,
@@ -264,23 +292,46 @@ export default function ChatAppMerged() {
               msg.isVideo ||
               (msg.fileUrl && /\.(mp4|webm|ogg)$/i.test(msg.fileUrl)),
           }));
+          setHasMore(data.hasMore);
+         if (page === 0) {
           setChats(msgs);
-          setIsLoading(false);
-        } catch (error) {
-          console.error("Error fetching chat messages", error);
-          setIsLoading(false);
-        }
-      };
+        } else {
+          setChats((prev) => [...msgs, ...prev]);
+          // maintain scroll position after prepending
+          setTimeout(() => {
+            if (el) {
+              el.scrollTop = el.scrollHeight - previousHeight;
+            }
+          }, 0);}
+        } catch (err) {
+        console.error("Error fetching chat messages:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
       fetchChatMessages();
     }
-  }, [credentials.room]);
+  }, [credentials.room,page]);
+ useEffect(() => {
+    const el = chatContentRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      // if we're within 20px of the top, and not already loading, fetch more
+          if (el.scrollTop <= 20 && !isLoading && hasMore) {
+       setPage(p => p + 1);
+     }
+    };
+
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isLoading]);
 
   // Send tribe message handler with check on messageSettings
   const handleMessageSubmit = (e) => {
     e.preventDefault();
     if (tribeInfo && tribeInfo.messageSettings === "admin") {
       if (!tribeInfo.admins.includes(authUser._id)) {
-        alert("Only tribe admins can send messages.");
         return;
       }
     }
@@ -290,6 +341,9 @@ export default function ChatAppMerged() {
         { text: input, sender: authUser._id, room: credentials.room },
         () => {
           setInput("");
+           if (chatContentRef.current) {
+          chatContentRef.current.scrollTop = chatContentRef.current.scrollHeight;
+        }
         }
       );
     }
@@ -332,7 +386,6 @@ export default function ChatAppMerged() {
         return xhr;
       },
       success: function (fileData) {
-        console.log("Upload Complete", fileData);
         $("#upload-progress-bar").addClass("progress-hide");
         if (socket) {
           socket.emit("tribeNewFileMessage", fileData);
@@ -375,11 +428,11 @@ export default function ChatAppMerged() {
   // after your other useEffects, but before the return(...)
 useEffect(() => {
   const el = chatContentRef.current;
-  if (el) {
-    // jump straight to the bottom
+  // only auto-scroll on the very first load (page 0)
+  if (el && page === 0) {
     el.scrollTop = el.scrollHeight;
   }
-}, [chats]);
+}, [chats, page]);
 
 
   const renderMessage = (chat, index, isLast) => {
@@ -708,25 +761,52 @@ const canDelete =
                             }}
                           >
                             <div
-                              className="card-body chat-content"
-                              ref={chatContentRef}
-                              style={{
-                                flex: 1,
-                                overflowY: "auto",
-                                overflowX: "hidden",
-                                wordBreak: "break-word",
-                              }}
-                            >
-                              {isLoading ? (
-                                <div style={{ textAlign: "center", padding: "20px" }}>
-                                  Loading messages...
-                                </div>
-                              ) : (
-                                chats.map((chat, index) =>
-                                  renderMessage(chat, index, index === chats.length - 1)
-                                )
-                              )}
-                            </div>
+  className="card-body chat-content"
+  ref={chatContentRef}
+  style={{
+    flex: 1,
+    overflowY: "auto",
+    overflowX: "hidden",
+    wordBreak: "break-word", // Ensures long messages wrap properly
+  }}
+>
+  {/* show banner when you've loaded at least one extra page and there’s no more to fetch */}
+  {!hasMore && page > 0 && (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "10px",
+        color: "#999",
+        fontStyle: "italic",
+      }}
+    >
+      — No more messages —
+    </div>
+  )}
+
+  {/* loading spinner/text for in-flight older-messages fetch */}
+  {isLoading && page > 0 && (
+    <div style={{ textAlign: "center", padding: "10px" }}>
+      Loading more...
+    </div>
+  )}
+
+  {/* your existing chat list */}
+  {chats.map((chat, idx) => {
+    const label = getDateLabel(chat.timestamp);
+    const prevLabel =
+      idx > 0 ? getDateLabel(chats[idx - 1].timestamp) : null;
+    return (
+      <React.Fragment key={chat.id || idx}>
+        {(idx === 0 || label !== prevLabel) && (
+          <DateSeparator label={label} />
+        )}
+        {renderMessage(chat, idx, idx === chats.length - 1)}
+      </React.Fragment>
+    );
+  })}
+</div>
+
 
                             {/* Chat Input Form */}
                             {!selectedUser && credentials.room && tribeInfo ? (

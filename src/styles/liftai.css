@@ -153,7 +153,7 @@
 
 /* Message context styles */
 .chat__conversation-board__message__context {
-  max-width: 55%;
+  max-width: 70%;
   align-self: flex-end;
 }
 
@@ -179,6 +179,26 @@
   outline: none;
 }
 
+:root {
+  /* define a user‐bubble color variable for clarity */
+  --chat-user-bubble-background: #3ea096;
+}
+
+/* sender bubble background */
+.chat__conversation-board__message-container.reversed
+  .chat__conversation-board__message__bubble span {
+  background: var(--chat-user-bubble-background);
+  /* keep text white for contrast */
+  color: white;
+}
+
+/* sender pointer (triangle) */
+.chat__conversation-board__message-container.reversed
+  .chat__conversation-board__message__bubble::after {
+  border-left-color: var(--chat-user-bubble-background);
+}
+
+
 .chat__conversation-board__message__options .emoji-button svg,
 .chat__conversation-board__message__options .more-button svg {
   stroke: var(--chat-options-svg);
@@ -196,13 +216,13 @@
   display: inline-table;
   word-wrap: break-word;
   background: var(--chat-bubble-background);
-  font-size: 16px;  /* Increased font size */
+  font-size: 14px;  /* Increased font size */
   color: var(--chat-text-color);
   padding: 0.5em 0.8em;
   line-height: 1.5;
   border-radius: 6px;
   font-family: 'Lato', sans-serif;
-  text-align: left; /* Default alignment for bot messages */
+  text-align: justify;
 }
 
 /* Pointer for bot messages (non-reversed) */
@@ -229,7 +249,7 @@
 
 /* Align user messages (reversed) text to right */
 .chat__conversation-board__message-container.reversed .chat__conversation-board__message__bubble span {
-  text-align: right;
+  text-align: justify;
 }
 
 .chat__conversation-board__message__bubble span:not(:last-child) {
@@ -388,28 +408,44 @@
 
 
 
-/* Media queries for responsiveness */
 @media only screen and (max-width: 600px) {
-  /* Adjust mobile styles so the complete chat box appears in a single page and content is bottom aligned */
+  /* keep the wrapper full-height flex */
   #chat {
+    display: flex;
+    flex-direction: column;
+    height: 90vh;
     margin: 5px;
-    border-radius: 5px;
-    width: calc(100% - 10px);
-    height: 90vh;  /* Set a fixed height of 90vh for mobile */
-    display: flex;
-    flex-direction: column;
+    padding: 0.5em;
+    overflow: visible;
   }
-  
-  /* Make the conversation board fill the available space and bottom-align its content */
-  #chat .chat__conversation-board {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    overflow-y: visible;  /* Disable internal scrolling */
+
+  /* 1) take it out of the flex‐children model
+     2) give it an explicit height (subtract input panel height + container padding)
+     3) let it scroll by itself */
+  .chat__conversation-board {
+    display: block;  /* no more flex on the board itself */
+    height: calc(90vh - 55px - 1em); /* 55px panel + 1em vertical padding */
+    overflow-y: auto;
+     justify-content: flex-end; 
+    -webkit-overflow-scrolling: touch;
   }
-  
-  #chat .chat__conversation-board__message__options {
-    display: none !important;
+
+  /* pin the input panel */
+  .chat__conversation-panel {
+    flex: none;
+    height: 55px;
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    background: var(--chat-panel-background);
+    border-top: 2px solid #215496;
+    z-index: 1;
   }
+
+  /* optional cleanup */
+  .chat__conversation-board__message__options { display: none; }
+  .chat__conversation-board__message__context { max-width: 100%; }
 }
+
+
+

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { fetchMe, searchTribesUser } from "@/app/api"; // make sure to import searchTribesUser
 import "@/styles/profile-style.css";
 import { TextEditor } from "../Tribes_Edit/TextEditor";
+import 'bootstrap/dist/js/bootstrap.bundle.min'; // ensure bootstrap JS is loaded
 
 const MyTribeDetails = () => {
   const { id } = useParams();
@@ -19,6 +20,16 @@ const MyTribeDetails = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showRateModal, setShowRateModal] = useState(false);
   const [rating, setRating] = useState(1);
+
+  // Toast refs
+  const successToastRef = useRef(null);
+  const errorToastRef = useRef(null);
+
+  // Helper to show a toast
+  const showToast = (ref) => {
+    const toast = new bootstrap.Toast(ref.current);
+    toast.show();
+  };
 
   // Edit‐form state
   const [formData, setFormData] = useState({
@@ -118,10 +129,15 @@ const MyTribeDetails = () => {
         `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/my-tribes/leave-tribe`,
         { tribeId: tribe._id, userId: user._id }
       );
-      alert(data.message);
-      router.push("/profile/user-tribes");
+      successToastRef.current.querySelector(".toast-body").innerText = data.message;
+      showToast(successToastRef);
+     setTimeout(() => {
+        router.push("/profile/user-tribes");
+     }, 1500);
+      
     } catch {
-      alert("Error leaving tribe.");
+      errorToastRef.current.querySelector(".toast-body").innerText = "Error leaving tribe.";
+      showToast(errorToastRef);
     }
   };
   const handleRemoveClick = async (memberId) => {
@@ -130,10 +146,12 @@ const MyTribeDetails = () => {
         `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/my-tribes/remove-member`,
         { tribeId: tribe._id, memberId }
       );
-      alert(data.message);
+      successToastRef.current.querySelector(".toast-body").innerText = data.message;
+      showToast(successToastRef);
       setTribe(data.tribe);
     } catch {
-      alert("Error removing member.");
+      errorToastRef.current.querySelector(".toast-body").innerText = "Error removing member.";
+      showToast(errorToastRef);
     }
   };
   const handleBlockMember = async (memberId) => {
@@ -141,10 +159,12 @@ const MyTribeDetails = () => {
       const { data } = await axios.post(
         `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/my-tribes/${tribe._id}/block/${memberId}`
       );
-      alert(data.message);
+      successToastRef.current.querySelector(".toast-body").innerText =data.message;
+      showToast(successToastRef);
       setTribe(data.tribe);
     } catch {
-      alert("Error blocking user.");
+      successToastRef.current.querySelector(".toast-body").innerText = "Error blocking user.";
+      showToast(errorToastRef);
     }
   };
   const handleJoinTribe = async () => {
@@ -153,13 +173,15 @@ const MyTribeDetails = () => {
         `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/my-tribes/join-tribe`,
         { tribeId: tribe._id, userId: user._id }
       );
-      alert("Successfully joined the tribe!");
+      successToastRef.current.querySelector(".toast-body").innerText = "Successfully joined the tribe!";
+      showToast(successToastRef);
       setTribe((prev) => ({
         ...prev,
         members: [...prev.members, user],
       }));
     } catch {
-      alert("Failed to join the tribe.");
+      successToastRef.current.querySelector(".toast-body").innerText = "Failed to join the tribe.";
+      showToast(errorToastRef);
     }
   };
   const handleRateSubmit = async (e) => {
@@ -169,10 +191,12 @@ const MyTribeDetails = () => {
         `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/my-tribes/${tribe._id}/rate`,
         { userId: user._id, rating }
       );
-      alert(data.message);
+      successToastRef.current.querySelector(".toast-body").innerText = data.message;
+      showToast(successToastRef);
       setShowRateModal(false);
     } catch {
-      alert("Error rating tribe.");
+            successToastRef.current.querySelector(".toast-body").innerText = "Error rating tribe.";
+      showToast(errorToastRef);
     }
   };
 
@@ -229,9 +253,11 @@ const MyTribeDetails = () => {
         data,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
-      alert("Tribe updated successfully.");
+      successToastRef.current.querySelector(".toast-body").innerText = "Tribe updated successfully.";
+      showToast(successToastRef);
     } catch {
-      alert("Error updating tribe.");
+      successToastRef.current.querySelector(".toast-body").innerText = "Error updating tribe.";
+      showToast(errorToastRef);
     }
   };
 
@@ -336,7 +362,9 @@ const MyTribeDetails = () => {
                 ) : (
                   <button
                     className="btn btn-primary"
-                    onClick={() => router.push(`/profile/tribe-chat/${id}`)}
+                    onClick={() =>setTimeout(() => {
+                      router.push(`/profile/tribe-chat/${id}`)
+                    }, 1500) }
                   >
                     Go to Chat
                   </button>
@@ -731,6 +759,42 @@ const MyTribeDetails = () => {
           </div>
         </div>
       )}
+      <div
+        ref={successToastRef}
+        className="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-4"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <div className="d-flex">
+          <div className="toast-body">Action succeeded.</div>
+          <button
+            type="button"
+            className="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+      </div>
+
+      {/* Error Toast */}
+      <div
+        ref={errorToastRef}
+        className="toast align-items-center text-white bg-danger border-0 position-fixed bottom-0 end-0 m-4"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <div className="d-flex">
+          <div className="toast-body">Action failed.</div>
+          <button
+            type="button"
+            className="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+      </div>
     </>
   );
 };

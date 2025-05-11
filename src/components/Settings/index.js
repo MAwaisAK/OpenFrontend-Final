@@ -1,5 +1,5 @@
 "use client";
-import React, { useState,useEffect } from "react";
+import React, { useState,useEffect,useRef } from "react";
 import Sidebar from "../AdminSideBar";
 import Navbar from "../Nav";
 import countries from "world-countries";
@@ -7,6 +7,7 @@ import Select from "react-select";
 import axios from 'axios';
 import { useAuth } from "../../lib/AuthContext"
 import { fetchUserPayments,getUserReports } from "@/app/api";
+import 'bootstrap/dist/js/bootstrap.bundle.min'; // ensure bootstrap JS is loaded
 
 const MyTribes = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -23,6 +24,13 @@ const MyTribes = () => {
   const [customValueChain, setCustomValueChain] = useState("");
   const [selectedBusinessNeeds, setSelectedBusinessNeeds] = useState([]);
   const [reports, setReports] = useState([]);
+  const successToastRef = useRef(null);
+  const errorToastRef = useRef(null);
+  const showToast = (ref) => {
+  const toast = new bootstrap.Toast(ref.current);
+  toast.show();
+  };
+
   const [securityData, setSecurityData] = useState({
     oldPassword: "",
     newPassword: "",
@@ -37,7 +45,6 @@ useEffect(() => {
     const loadPayments = async () => {
       try {
         const paymentsData = await fetchUserPayments(userId);
-        console.log(paymentsData.payments);
         setPayments(paymentsData.payments);
       } catch (error) {
         console.error("Error loading payments:", error);
@@ -94,7 +101,6 @@ useEffect(() => {
 
   useEffect(() => {
     if (user) {
-      console.log("Fetched User:", user);
 
       setUserData({
         id:user._id,
@@ -149,10 +155,11 @@ useEffect(() => {
           },
         }
       );
-      alert("Profile updated successfully!");
+      successToastRef.current.querySelector(".toast-body").innerText = "Profile updated successfully!";
+showToast(successToastRef);
     } catch (error) {
-      console.error("Error updating profile:", error);
-      alert("Failed to update profile.");
+      successToastRef.current.querySelector(".toast-body").innerText = error;
+showToast(errorToastRef);
     }
   };
 
@@ -164,7 +171,8 @@ useEffect(() => {
   const handleSecuritySubmit = async (e) => {
     e.preventDefault();
     if (securityData.newPassword !== securityData.confirmPassword) {
-      alert("New password and confirm password do not match.");
+      successToastRef.current.querySelector(".toast-body").innerText = "New password and confirm password do not match.";
+showToast(errorToastRef);
       return;
     }
     try {
@@ -178,15 +186,17 @@ useEffect(() => {
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Password updated successfully!");
+      successToastRef.current.querySelector(".toast-body").innerText = "Password updated successfully!";
+showToast(successToastRef);
       setSecurityData({
         oldPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
     } catch (error) {
-      console.error("Error updating password:", error);
-      alert("Failed to update password.");
+
+      successToastRef.current.querySelector(".toast-body").innerText = error;
+showToast(errorToastRef);
     }
   };
 
@@ -241,7 +251,8 @@ useEffect(() => {
       // Validate password change if provided.
       if (accountSettings.newPassword) {
         if (accountSettings.newPassword !== accountSettings.confirmPassword) {
-          alert("New password and confirm password do not match.");
+          successToastRef.current.querySelector(".toast-body").innerText = "New password and confirm password do not match.";
+          showToast(errorToastRef);
           return;
         }
       }
@@ -262,10 +273,12 @@ useEffect(() => {
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        alert("Account settings updated successfully!");
+        successToastRef.current.querySelector(".toast-body").innerText = "Account settings updated successfully!";
+showToast(successToastRef);
       } catch (error) {
-        console.error("Error updating account settings:", error);
-        alert("Failed to update account settings.");
+
+        successToastRef.current.querySelector(".toast-body").innerText = "Failed to update account settings.";
+showToast(errorToastRef);
       }
     };
   
@@ -1071,6 +1084,42 @@ const estabishmentcountryList = countries
           </div>
         </div>
       </div>
+      <div
+ref={successToastRef}
+className="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-4"
+role="alert"
+aria-live="assertive"
+aria-atomic="true"
+>
+<div className="d-flex">
+<div className="toast-body">Action succeeded.</div>
+<button
+type="button"
+className="btn-close btn-close-white me-2 m-auto"
+data-bs-dismiss="toast"
+aria-label="Close"
+></button>
+</div>
+</div>
+
+{/* Error Toast */}
+<div
+ref={errorToastRef}
+className="toast align-items-center text-white bg-danger border-0 position-fixed bottom-0 end-0 m-4"
+role="alert"
+aria-live="assertive"
+aria-atomic="true"
+>
+<div className="d-flex">
+<div className="toast-body">Action failed.</div>
+<button
+type="button"
+className="btn-close btn-close-white me-2 m-auto"
+data-bs-dismiss="toast"
+aria-label="Close"
+></button>
+</div>
+</div>
     </>
   );
 };

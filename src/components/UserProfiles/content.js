@@ -116,19 +116,20 @@ const UserList = () => {
   }, [searchQuery]);
 
   // Infinite scrolling: Load more profiles when near bottom (only for "tribers" tab when not searching).
-  useEffect(() => {
-    const handleScroll = () => {
-      if (activeTab !== "tribers" || loadingMore || !hasMore || searchQuery) return;
-      if (
-        window.innerHeight + window.scrollY >=
-        document.documentElement.offsetHeight - 100
-      ) {
-        setCurrentPage((prevPage) => prevPage + 1);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [activeTab, loadingMore, hasMore, searchQuery]);
+useEffect(() => {
+  const handleScroll = () => {
+    if (activeTab !== "tribers" || loadingMore || !hasMore || searchQuery) return;
+    if (
+      window.innerHeight + window.scrollY >=
+      document.documentElement.offsetHeight - 100
+    ) {
+      setCurrentPage((prevPage) => prevPage + 1);
+    }
+  };
+  window.addEventListener("scroll", handleScroll);
+  return () => window.removeEventListener("scroll", handleScroll);
+}, [activeTab, loadingMore, hasMore, searchQuery]);
+
 
   // Build an exclusion list from current user's relationships.
   const getExclusionIds = () => {
@@ -259,7 +260,6 @@ const UserList = () => {
       setBlockedUsers((prevUsers) =>
         prevUsers.filter((u) => getUserId(u) !== getUserId(user))
       );
-      console.log(`${user.username} has been unblocked.`);
     } catch (error) {
       console.error("Error unblocking user:", error);
     }
@@ -415,8 +415,14 @@ const UserList = () => {
               </div>
             </div>
           ))}
-          {loadingMore && <p>Loading more tribers...</p>}
-          {!hasMore && <p>No more tribers to load.</p>}
+          {hasMore && !loadingMore && (
+  <div style={{ textAlign: "center", margin: "1rem 0" }}>
+    <button onClick={() => setCurrentPage((prev) => prev + 1)} className="load-more-button">
+      Load More
+    </button>
+  </div>
+)}
+{loadingMore && <p>Loading more tribers...</p>}
         </>
       )}
 

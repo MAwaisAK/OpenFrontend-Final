@@ -246,6 +246,7 @@ const UserManagement = () => {
                         <th>Username</th>
                         <th>Name</th>
                         <th>Profile</th>
+                        <th>Email</th>
                         <th>Tokens</th>
                         <th>Subscription</th>
                         <th>Status</th>
@@ -279,6 +280,7 @@ const UserManagement = () => {
                                   style={{ borderRadius: "100%" }}
                                 />
                               </td>
+                              <td>{user.email}</td>
                               <td>
                                 <div>
                                   <span>{user.tokens || 0}</span>

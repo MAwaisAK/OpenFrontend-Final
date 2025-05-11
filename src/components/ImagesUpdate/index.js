@@ -147,13 +147,13 @@ export default function ImageEditor() {
                             />
                             {landingPreview ? (
                               <img
-                                src={landingPreview}
+                                src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingPreview}`}
                                 alt="Landing Preview"
                                 style={{ width: "200px", marginTop: "10px" }}
                               />
                             ) : landingImage ? (
                               <img
-                                src={landingImage}
+                                src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingImage}`}
                                 alt="Current Landing"
                                 style={{ width: "200px", marginTop: "10px" }}
                               />
@@ -194,13 +194,13 @@ export default function ImageEditor() {
                             />
                             {landingMiniPreview ? (
                               <img
-                                src={landingMiniPreview}
+                                src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingMiniPreview}`}
                                 alt="Landing Mini Preview"
                                 style={{ width: "200px", marginTop: "10px" }}
                               />
                             ) : landingMiniImage ? (
                               <img
-                                src={landingMiniImage}
+                                src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingMiniImage}`}
                                 alt="Current Landing Mini"
                                 style={{ width: "200px", marginTop: "10px" }}
                               />
@@ -241,13 +241,13 @@ export default function ImageEditor() {
                             />
                             {dashboardPreview ? (
                               <img
-                                src={dashboardPreview}
+                                src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${dashboardPreview}`}
                                 alt="Dashboard Preview"
                                 style={{ width: "200px", marginTop: "10px" }}
                               />
                             ) : dashboardImage ? (
                               <img
-                                src={dashboardImage}
+                                src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${dashboardImage}`}
                                 alt="Current Dashboard"
                                 style={{ width: "200px", marginTop: "10px" }}
                               />

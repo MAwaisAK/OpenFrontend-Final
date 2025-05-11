@@ -1,11 +1,12 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect , useRef} from 'react';
 import { fetchUsersAllTribes } from "@/app/api";
 import { useAuth } from "../../lib/AuthContext"; 
 import "@/styles/profilecard.css";
 import axios from "axios"; // Import axios
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'
+import Link from 'next/link';
+import 'bootstrap/dist/js/bootstrap.bundle.min'; // ensure bootstrap JS is loaded
 
 const MyTribes = () => {
   const [searchVisible, setSearchVisible] = useState(false);
@@ -18,6 +19,14 @@ const MyTribes = () => {
   const router = useRouter();
   const { user } = useAuth();
   const userId = user._id;
+  const successToastRef = useRef(null);
+const errorToastRef = useRef(null);
+
+const showToast = (ref) => {
+const toast = new bootstrap.Toast(ref.current);
+toast.show();
+};
+
 
   useEffect(() => {
     const getTribes = async () => {
@@ -57,7 +66,6 @@ const MyTribes = () => {
         });
   
         setTribes(mappedTribes);
-        console.log(mappedTribes);
       } catch (error) {
         console.error("Error fetching tribes:", error);
       }
@@ -75,7 +83,10 @@ const MyTribes = () => {
       );
   
       if (response.data) {
-        alert("Successfully joined the tribe!");
+        successToastRef.current.querySelector(".toast-body").innerText = "Successfully joined the tribe!";
+showToast(successToastRef);
+
+
   
         // Update UI: increase member count
         setTribes((prevTribes) =>
@@ -91,8 +102,8 @@ const MyTribes = () => {
         router.push(`/profile/tribe-chat/${tribeId}`);
       }
     } catch (error) {
-      console.error("Error joining tribe:", error.response?.data || error.message);
-      alert("Failed to join the tribe. Please try again.");
+      successToastRef.current.querySelector(".toast-body").innerText = "Failed to join the tribe.";
+showToast(errorToastRef);
     }
   };
   
@@ -404,6 +415,42 @@ const MyTribes = () => {
           <span>Next &raquo;</span>
         </button>
       </div>
+      <div
+ref={successToastRef}
+className="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-4"
+role="alert"
+aria-live="assertive"
+aria-atomic="true"
+>
+<div className="d-flex">
+<div className="toast-body">Action succeeded.</div>
+<button
+type="button"
+className="btn-close btn-close-white me-2 m-auto"
+data-bs-dismiss="toast"
+aria-label="Close"
+></button>
+</div>
+</div>
+
+{/* Error Toast */}
+<div
+ref={errorToastRef}
+className="toast align-items-center text-white bg-danger border-0 position-fixed bottom-0 end-0 m-4"
+role="alert"
+aria-live="assertive"
+aria-atomic="true"
+>
+<div className="d-flex">
+<div className="toast-body">Action failed.</div>
+<button
+type="button"
+className="btn-close btn-close-white me-2 m-auto"
+data-bs-dismiss="toast"
+aria-label="Close"
+></button>
+</div>
+</div>
     </>
   );
 };

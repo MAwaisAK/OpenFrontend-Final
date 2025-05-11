@@ -83,7 +83,6 @@ const MyTribes = () => {
     text = text.replace(/<b>(.*?)<\/b>/gi, "**$1**");
     text = text.replace(/<[^>]+>/g, "");
     navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
   };
 
   const [isSpeaking, setIsSpeaking] = useState(false);

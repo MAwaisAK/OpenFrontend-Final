@@ -1,21 +1,28 @@
 import axios from "axios";
 
 // Axios request interceptor to add authorization header
-axios.interceptors.request.use(
-  function (config) {
-    const { origin } = new URL(config.url);
-    const allowedOrigins = [process.env.NEXT_PUBLIC_BASE_ENDPOINT];
-    const token = localStorage.getItem("access-token");
+if (typeof window !== "undefined") {
+  axios.interceptors.request.use(
+    function (config) {
+      try {
+        const { origin } = new URL(config.url);
+        const allowedOrigins = [process.env.NEXT_PUBLIC_BASE_ENDPOINT];
+        const token = localStorage.getItem("access-token");
 
-    if (allowedOrigins.includes(origin) && token) {
-      config.headers.authorization = `Bearer ${token}`; // Prefix token with Bearer
+        if (allowedOrigins.includes(origin) && token) {
+          config.headers.authorization = `Bearer ${token}`;
+        }
+      } catch (e) {
+        // if URL parsing or localStorage fails, we silently continue
+      }
+      return config;
+    },
+    function (error) {
+      return Promise.reject(error);
     }
-    return config;
-  },
-  function (error) {
-    return Promise.reject(error);
-  }
-);
+  );
+}
+
 
 export const fetchAllUsers = async () => {
   try {
@@ -271,7 +278,6 @@ export const fetchAllToolsCoursesbyId = async (id) => {
 export const deleteChatLobby = async (chatLobbyId) => {
   try {
     const response = await axios.delete(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/auth/chat-lobbies/${chatLobbyId}`);
-    console.log('Chat lobby deleted:', response.data);
   } catch (error) {
     console.error('Error deleting chat lobby:', error.response?.data || error.message);
   }
@@ -280,7 +286,6 @@ export const deleteChatLobby = async (chatLobbyId) => {
 export const searchUsers = async (query) => {
   try {
     const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/auth/user-search`);
-    console.log('Search results:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error searching users:', error.response?.data || error.message);
@@ -486,7 +491,6 @@ export const createOrFetchChatLobby = async (userId1, userId2) => {
       { userId1, userId2 },
       { headers: { Authorization: `Bearer ${yourAuthToken}` } }
     );
-    console.log("Chat Lobby ID:", response.data.chatLobbyId);
     return response.data.chatLobbyId;
   } catch (error) {
     console.error("Error fetching or creating chat lobby:", error);
@@ -606,8 +610,6 @@ export const getAllFriendList = async (userId, page = 1) => {
 
 export const createChatLobbyRequest = async (userId1, userId2) => {
   try {
-    console.log(userId1);
-    console.log(userId1);
     const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/auth/create-chat-lobby`, { userId1, userId2 });
     return response.data;
   } catch (error) {
@@ -663,7 +665,6 @@ export const sendContactMessage = async (data) => {
 
 export const sendFriendRequest = async (receiverId, currentUserId) => {
   try {
-    console.log("Sending friend request to backend:", { receiverId, currentUserId });
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/auth/send-request`,
       {
@@ -1151,15 +1152,12 @@ export const getAllTribersForUserAPI = async () => {
 
 export const getRandomUserProfiles = async (page = 1, userId) => {
   try {
-    console.log("backend "+userId);
     const baseUrl = process.env.NEXT_PUBLIC_BASE_ENDPOINT;
     if (!baseUrl) {
       throw new Error("Base endpoint is not defined in environment variables.");
     }
     const response = await axios.get(`${baseUrl}/auth/tribes-profile`, {page, user_id: userId}
     );
-
-    console.log("Random user profiles:", response.data);
     return response.data;
   } catch (error) {
     console.error(
@@ -1216,7 +1214,6 @@ export const fetchDashboardStats = async () => {
     const res = await axios.get(
       `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/images/get-stat-number`
     );
-    console.log(res.data);
     return {
       userCount: res.data.userCount,
       myTribesCount: res.data.myTribesCount,
@@ -1284,7 +1281,6 @@ export const fetchUserPayments = async (userId, status = "") => {
 // Update the status of a specific payment
 export const updatePaymentStatus = async (paymentId, status) => {
   try {
-    console.log(paymentId, status);
     const { data } = await axios.put(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/payment/update-payment-status`, {
       paymentId,
       status,

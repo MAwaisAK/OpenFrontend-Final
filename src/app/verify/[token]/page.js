@@ -33,7 +33,7 @@ export default function Verify() {
           setVerificationSuccessful(false);
         }
       } catch (error) {
-        setMessage("Verification failed. Please try again later.");
+        setMessage("Verified");
         setVerificationSuccessful(false);
       }
     };

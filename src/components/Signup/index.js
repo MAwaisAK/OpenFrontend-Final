@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState,useRef } from "react";
 import { useFormik } from "formik";
 import AdminExternalResources from "../AdminExternalResources";
 import countries from "world-countries";
@@ -8,6 +8,7 @@ import validationSchema from "./validations"; // Ensure it validates password co
 import { fetcRegister } from "../../app/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import 'bootstrap/dist/js/bootstrap.bundle.min'; // ensure bootstrap JS is loaded
 
 const Signup = () => {
   const countryList = countries.map((country) => ({
@@ -15,6 +16,12 @@ const Signup = () => {
     code: country.cca2,
   }));
   const router = useRouter();
+  const successToastRef = useRef(null);
+  const errorToastRef = useRef(null);
+  const showToast = (ref) => {
+  const toast = new bootstrap.Toast(ref.current);
+  toast.show();
+  };
 
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -41,9 +48,12 @@ const Signup = () => {
     onSubmit: async (values, bag) => {
       try {
         await fetcRegister(values);
-        alert("Registration successful! Check your email to verify your account.");
+        successToastRef.current.querySelector(".toast-body").innerText = "Registration successful! Check your email to verify your account.";
+        showToast(successToastRef);
         bag.resetForm();
+        setTimeout(() => {
         router.push("/login"); // ✅ Now this will work
+        }, 3000);
       } catch (error) {
         bag.setErrors({ general: error.response?.data?.message || error.message });
       }
@@ -203,6 +213,24 @@ const Signup = () => {
           </div>
         </div>
       </div>
+      <div
+ref={successToastRef}
+className="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-4"
+role="alert"
+aria-live="assertive"
+aria-atomic="true"
+>
+<div className="d-flex">
+<div className="toast-body">Action succeeded.</div>
+<button
+type="button"
+className="btn-close btn-close-white me-2 m-auto"
+data-bs-dismiss="toast"
+aria-label="Close"
+></button>
+</div>
+</div>
+
     </>
   );
 };

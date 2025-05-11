@@ -3,7 +3,13 @@ import Image from 'next/image';
 
 const Footer = () => {
   return (
+    
     <footer id="footer" className="footer position-relative light-background">
+      <link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+/>
+
       <a href="#" id="scroll-top" className="scroll-top d-flex align-items-center justify-content-center"><i className="bi bi-arrow-up-short"></i></a>
       <div className="container footer-top">
         <div className="row gy-4">
@@ -12,30 +18,47 @@ const Footer = () => {
             <Image  src="/assets/img/footer.png" width={150} height={100}/>
 
             </a>
-            <div className="footer-contact pt-3">
-              <p>A108 Adam Street</p>
-              <p>New York, NY 535022</p>
-              <p className="mt-3">
-                <strong>Phone:</strong> <span>+1 5589 55488 55</span>
-              </p>
-              <p>
-                <strong>Email:</strong> <span>info@example.com</span>
-              </p>
-            </div>
-            <div className="social-links d-flex mt-4">
-              <a href="#" target="_blank" rel="noopener noreferrer">
-                <i className="bi bi-twitter-x"></i>
-              </a>
-              <a href="#" target="_blank" rel="noopener noreferrer">
-                <i className="bi bi-facebook"></i>
-              </a>
-              <a href="#" target="_blank" rel="noopener noreferrer">
-                <i className="bi bi-instagram"></i>
-              </a>
-              <a href="#" target="_blank" rel="noopener noreferrer">
-                <i className="bi bi-linkedin"></i>
-              </a>
-            </div>
+<div className="footer-contact pt-3">
+  <p className="mt-3">
+    <strong>Phone:</strong>{" "}
+    <a href="tel:+13528204044">+1 (352) 820-4044</a>
+  </p>
+  <p>
+    <strong>Email:</strong>{" "}
+    <a href="mailto:info@openpreneurs.business">
+      info@openpreneurs.business
+    </a>
+  </p>
+</div>
+
+<div className="social-links d-flex mt-4">
+  <a
+    href="https://www.instagram.com/0penpreneurs?igsh=d2RhZTBsdXViOHNj"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="me-3"
+  >
+    <i className="bi bi-instagram"></i>
+  </a>
+
+  <a
+    href="https://www.linkedin.com/showcase/openpreneurs/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="me-3"
+  >
+    <i className="bi bi-linkedin"></i>
+  </a>
+
+  <a
+    href="https://www.threads.net/@0penpreneurs"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <i className="fab fa-threads"></i>
+  </a>
+</div>
+
           </div>
 
           <div className="col-lg-2 col-md-3 footer-links">

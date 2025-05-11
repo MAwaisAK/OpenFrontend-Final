@@ -16,7 +16,6 @@ const AdminBody = () => {
         try {
           const data = await fetchAllToolsCoursesbyId(id); // Use the API function
           setTool(data);
-          console.log(data);
         } catch (error) {
           console.error("Error fetching tool details:", error);
         }

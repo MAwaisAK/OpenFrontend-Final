@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children }) => {
     }
 
     // 3️⃣ Any unauthenticated user on profile or any /admin path goes to login
-    if (!loggedIn && (pathname.startsWith("/profile") || pathname.startsWith("/admin"))) {
+    if (!loggedIn && (pathname.startsWith("/profile") || pathname.startsWith("/admin/opulententrepreneurs/open"))) {
       router.push("/login");
       return;
     }
@@ -37,7 +37,7 @@ const ProtectedRoute = ({ children }) => {
   // While we're redirecting, render nothing
   if (
     (isAdmin && pathname.startsWith("/profile")) ||
-    (!loggedIn && (pathname.startsWith("/profile") || pathname.startsWith("/admin"))) ||
+    (!loggedIn && (pathname.startsWith("/profile") || pathname.startsWith("/admin/opulententrepreneurs/open"))) ||
     (pathname.startsWith("/admin/opulententrepreneurs/open/dashboard") && (!loggedIn || !isAdmin))
   ) {
     return null;

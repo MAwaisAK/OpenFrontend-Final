@@ -18,7 +18,6 @@ const AdminBody = () => {
         try {
           const data = await fetchAllCoursesbyId(id); // Use the API function to get the course data
           setCourse(data);
-          console.log(data);
 
           // Fetch user data to check if the course is in the user's courses
           const userData = await fetchMe(); // Assuming fetchMe gets the current user info

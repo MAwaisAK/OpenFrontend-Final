@@ -33,7 +33,6 @@ const MyTribes = () => {
         try {
           const userData = await fetchMe();
           setAuthUser(userData);
-          console.log(authUser);
     
           // Check if the user is blocked or has blocked the other user
           if (Array.isArray(userData.blockedtribers) && userData.blockedtribers.includes(id)) {
@@ -122,7 +121,6 @@ const MyTribes = () => {
       };
 
   // Log the route parameters to verify
-  console.log("Route parameters:", { id });
 
   // Fetch the target user profile using Axios from the "/profile/:id" endpoint.
   useEffect(() => {
@@ -131,7 +129,6 @@ const MyTribes = () => {
         const response = await axios.get(
            `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/auth/profile/${id}`
         );
-        console.log("Response:", response.data);
         if (response.data.success) {
           setProfileData(response.data.data);
 
@@ -141,8 +138,7 @@ const MyTribes = () => {
             response.data.data.joined_tribes.length > 0
           ) {
             const joinedTribes = response.data.data.joined_tribes;
-            setTribesData(joinedTribes); // Update the tribesData state with the list of joined tribes
-            console.log("Tribes Data Updated:", tribesData);
+            setTribesData(joinedTribes);
           }
         }
       } catch (error) {
@@ -156,8 +152,6 @@ const MyTribes = () => {
   }, [id]);
 
   useEffect(() => {
-    // Log the updated tribesData state here, ensuring that it's updated correctly.
-    console.log("Updated Tribes Data:", tribesData);
   }, [tribesData]); // This will log whenever tribesData is updated
 
   // Close dropdown when clicking outside

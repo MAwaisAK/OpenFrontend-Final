@@ -16,6 +16,31 @@ const BASE_ENDPOINT =
   const SOCKET_ENDPOINT =
   process.env.NEXT_PUBLIC_BASE_ENDPOINT_SOCKET;
 
+// Date separator component
+const DateSeparator = ({ label }) => (
+  <div style={{ textAlign: 'center', margin: '10px 0' }}>
+    <span
+      style={{
+        background: '#e0e0e0',
+        padding: '4px 12px',
+        borderRadius: '12px',
+        fontSize: '0.8em',
+        color: '#555',
+      }}
+    >
+      {label}
+    </span>
+  </div>
+);
+
+// Get human-friendly date
+const getDateLabel = (timestamp) => {
+  const msgDate = moment(timestamp);
+  if (msgDate.isSame(moment(), 'day')) return 'Today';
+  if (msgDate.isSame(moment().subtract(1, 'day'), 'day')) return 'Yesterday';
+  return msgDate.format('MMMM D, YYYY');
+};
+
 
 export default function ChatAppMerged() {
   // Chat state
@@ -29,21 +54,13 @@ export default function ChatAppMerged() {
   const [chats, setChats] = useState([]);
   const [input, setInput] = useState("");
   const [users, setUsers] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [unseenCount, setUnseenCount] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const chatContentRef = useRef(null);
+        const [hasMore, setHasMore]   = useState(true);
 
   // Call-related state
-  const [showCallModal, setShowCallModal] = useState(false);
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [callRole, setCallRole] = useState(""); // "caller" or "receiver"
-  const [callAccepted, setCallAccepted] = useState(false);
-  const [isCalling, setIsCalling] = useState(false);
-  const [callTime, setCallTime] = useState(0);
-  const [timerInterval, setTimerInterval] = useState(null);
-  const [callInterval, setCallInterval] = useState(null);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [friendsIds, setFriendsIds] = useState([]);        // raw IDs from fetchMe
@@ -138,7 +155,6 @@ const handleFriendClick = async (friend) => {
           },
         }
       );
-      console.log("Delete response:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error deleting chat for user:", error);
@@ -195,109 +211,7 @@ const handleFriendClick = async (friend) => {
       });
     }
   };
-  
-  
 
-  // Start capturing audio and sending chunks via socket.
-  const startAudioCall = () => {
-    const constraints = { audio: true };
-    navigator.mediaDevices
-      .getUserMedia(constraints)
-      .then((mediaStream) => {
-        const mimeType = getSupportedMimeType();
-        if (!mimeType) {
-          console.error("No supported MIME type for MediaRecorder.");
-          return;
-        }
-        const recorder = new MediaRecorder(mediaStream, { mimeType });
-        recorder.onstart = function () {
-          this.chunks = [];
-        };
-        recorder.ondataavailable = function (e) {
-          this.chunks.push(e.data);
-        };
-        recorder.onstop = function () {
-          const blob = new Blob(this.chunks, { type: mimeType });
-          if (socket && credentials.room) {
-            socket.emit("audioCall", { chatLobbyId: credentials.room, blob });
-          }
-        };
-        recorder.start();
-        // Every second, stop and restart to send chunks.
-        const interval = setInterval(() => {
-          if (recorder.state === "recording") {
-            recorder.stop();
-            recorder.start();
-          }
-        }, 1000);
-        setCallInterval(interval);
-        setMediaRecorder(recorder);
-        setIsCalling(true);
-      })
-      .catch((error) => {
-        console.error("Error starting audio call", error);
-      });
-  };
-
-  // End call: stop recording, timer, and notify the other user.
-  const endCall = () => {
-    if (callInterval) {
-      clearInterval(callInterval);
-      setCallInterval(null);
-    }
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
-    }
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-    }
-    setIsCalling(false);
-    setCallAccepted(false);
-    setCallTime(0);
-    setShowCallModal(false);
-    setIncomingCall(null);
-    if (socket && credentials.room) {
-      socket.emit("callEnded", credentials.room);
-    }
-  };
-
-  // Caller initiates the call.
-  const handleCallPress = () => {
-    if (socket && credentials.room) {
-      setCallRole("caller");
-      setCallAccepted(false);
-      socket.emit("initializeAudioCall", credentials.room);
-    }
-    setShowCallModal(true);
-  };
-
-  // Receiver accepts the incoming call.
-  const handleAcceptCall = () => {
-    if (socket && credentials.room) {
-      socket.emit("callReceived", credentials.room);
-    }
-    setCallAccepted(true);
-    // Start the call timer.
-    setCallTime(0);
-    const timer = setInterval(() => {
-      setCallTime((prev) => prev + 1);
-    }, 1000);
-    setTimerInterval(timer);
-    // Start sending audio if not already.
-    if (!isCalling) {
-      startAudioCall();
-    }
-  };
-
-  // Receiver rejects the call.
-  const handleRejectCall = () => {
-    if (socket && credentials.room) {
-      socket.emit("callNotReceived", credentials.room);
-    }
-    setShowCallModal(false);
-    setIncomingCall(null);
-  };
 
   // Fetch authenticated user info.
   useEffect(() => {
@@ -357,76 +271,77 @@ const handleFriendClick = async (friend) => {
     }
   };
 
+    const [page, setPage] = useState(0);
   // Fetch chat history when a chat lobby is set.
-  useEffect(() => {
-    if (credentials.room) {
-      const fetchChatMessages = async () => {
-        try {
-          setIsLoading(true);
-          const res = await axios.get(
-            `${BASE_ENDPOINT}/auth/chat-messages/${credentials.room}?userId=${credentials.userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("access-token")}`,
-              },
-            }
-          );
-          const msgs = res.data.map((msg) => ({
-            id: msg._id,
-            text: msg.message,
-            from: msg.sender.username || msg.sender,
-            senderId: msg.sender._id || msg.sender,
-            time: moment(msg.sentAt).format("hh:mm"),
-            timestamp: msg.sentAt,
-            type: msg.type || "text",
-            seen: msg.seen,
-            url: msg.fileUrl,
-            isImage: msg.isImage,
-            isVideo:
-              msg.isVideo ||
-              (msg.fileUrl && /\.(mp4|webm|ogg)$/i.test(msg.fileUrl)),
-          }));
+useEffect(() => {
+    if (!credentials.room) return;
+    const fetchMessages = async () => {
+      const el = chatContentRef.current;
+      let previousHeight = 0;
+      if (el && page > 0) previousHeight = el.scrollHeight;
+
+      setIsLoading(true);
+      try {
+       const { data } = await axios.get(
+          `${BASE_ENDPOINT}/auth/chat-messages/${credentials.room}?userId=${credentials.userId}&page=${page}`,
+          { headers: { Authorization: `Bearer ${localStorage.getItem("access-token")}` } }
+        );
+        const msgs = data.messages.map((msg) => ({
+          id: msg._id,
+          text: msg.message,
+          from: msg.sender.username || msg.sender,
+          senderId: msg.sender._id || msg.sender,
+          time: moment(msg.sentAt).format("hh:mm"),
+          timestamp: msg.sentAt,
+          type: msg.type || "text",
+          seen: msg.seen,
+          url: msg.fileUrl,
+          isImage: msg.isImage,
+          isVideo: msg.isVideo || (msg.fileUrl && /\.(mp4|webm|ogg)$/i.test(msg.fileUrl)),
+        }));
+setHasMore(data.hasMore);
+        if (page === 0) {
           setChats(msgs);
-          setIsLoading(false);
-          if (selectedUser && selectedUser._id) {
-            setUnseenCount((prev) => ({ ...prev, [selectedUser._id]: 0 }));
-          }
-         // tell the server you’ve seen _their_ messages
-          await axios.patch(
-            `${BASE_ENDPOINT}/messages/${credentials.room}/mark-seen`,
-            {},
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("access-token")}`,
-              },
+        } else {
+          setChats((prev) => [...msgs, ...prev]);
+          // maintain scroll position after prepending
+          setTimeout(() => {
+            if (el) {
+              el.scrollTop = el.scrollHeight - previousHeight;
             }
-          );
-
-          // locally only mark messages _not_ from you as seen
-          setChats(prevChats =>
-            prevChats.map(msg =>
-              // msg.senderId is the sender of that message:
-              msg.senderId !== authUser._id
-                ? { ...msg, seen: true }
-                : msg
-            )
-          );
-
-        } catch (error) {
-          console.error("Error fetching chat messages", error);
-          setIsLoading(false);
+          }, 0);
         }
-      };
-      fetchChatMessages();
-    }
-  }, [credentials.room, selectedUser]);
+      } catch (err) {
+        console.error("Error fetching chat messages:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMessages();
+  }, [credentials.room, credentials.userId, page]);
 
-  // Auto-scroll chat content.
+  // Infinite scroll: load older messages when scrolled to top
+ useEffect(() => {
+    const el = chatContentRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      // if we're within 20px of the top, and not already loading, fetch more
+          if (el.scrollTop <= 20 && !isLoading && hasMore) {
+       setPage(p => p + 1);
+     }
+    };
+
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isLoading]);
+
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
-    if (chatContentRef.current) {
+    if (page === 0 && chatContentRef.current) {
       chatContentRef.current.scrollTop = chatContentRef.current.scrollHeight;
     }
-  }, [chats]);
+  }, [chats, page]);
 
   // Socket.IO connection and event handlers.
   useEffect(() => {
@@ -436,7 +351,6 @@ const handleFriendClick = async (friend) => {
 
       socketConnection.on("connect", () => {
         socketConnection.emit("join", credentials, (err) => {
-          if (err) alert(err);
         });
       });
 
@@ -537,61 +451,12 @@ const handleFriendClick = async (friend) => {
       
       
 
-      // Call events.
-      socketConnection.on("incomingCall", (caller) => {
-        if (!isCalling) {
-          setIncomingCall(caller);
-          setCallRole("receiver");
-          setShowCallModal(true);
-        } else {
-          socketConnection.emit("userBusy", credentials.room);
-        }
-      });
-
-      socketConnection.on("notifyCallReceived", () => {
-        if (callRole === "caller" && !callAccepted) {
-          setCallAccepted(true);
-          setCallTime(0);
-          const timer = setInterval(() => {
-            setCallTime((prev) => prev + 1);
-          }, 1000);
-          setTimerInterval(timer);
-        }
-        if (!isCalling) {
-          startAudioCall();
-        }
-      });
-
-      socketConnection.on("onAudioCall", (arrayBuffer) => {
-        const blob = new Blob([arrayBuffer], { type: getSupportedMimeType() });
-        if (audioRef.current) {
-          audioRef.current.src = window.URL.createObjectURL(blob);
-          audioRef.current
-            .play()
-            .catch((err) => console.error("Error playing audio", err));
-        }
-      });
-
-      socketConnection.on("callEnded", () => {
-        endCall();
-      });
-
-      socketConnection.on("callNotReceived", () => {
-        setShowCallModal(false);
-        setIsCalling(false);
-      });
-
-      socketConnection.on("userBusy", () => {
-        alert("User busy. Try again later.");
-        setShowCallModal(false);
-        setIsCalling(false);
-      });
 
       return () => {
         socketConnection.disconnect();
       };
     }
-  }, [authUser, credentials.room, selectedUser, isCalling, callRole, callAccepted]);
+  }, [authUser, credentials.room, selectedUser]);
 
   // whenever chats change, auto-emit messageSeen for any incoming messages you haven’t seen yet
 useEffect(() => {
@@ -609,22 +474,30 @@ useEffect(() => {
 
 
   // When a user is clicked in the sidebar, create or fetch a chat lobby.
-  const handleUserClick = async (recipient) => {
-    console.log(recipient);
-    setSelectedUser(recipient);
-    try {
-      const res = await axios.post(
-        `${BASE_ENDPOINT}/auth/chat-lobby`,
-        { userId1: authUser._id, userId2: recipient.participants[1] },
-      );
-      const chatLobbyId = res.data.chatLobbyId;
-      setCredentials((prev) => ({ ...prev, room: chatLobbyId }));
-      setChats([]);
-      setUnseenCount((prev) => ({ ...prev, [recipient._id]: 0 }));
-    } catch (error) {
-      console.error("Error creating/fetching chat lobby", error);
-    }
-  };
+const handleUserClick = async (recipient) => {
+  // 1. If it’s the same lobby, ignore
+  if (credentials.room === recipient.chatLobbyId) return;
+
+  // 2. Now clear out any old messages & reset page/loading
+  setChats([]);
+  setPage(0);
+  setIsLoading(true);
+
+  // 3. Switch the room and fetch
+  setSelectedUser(recipient);
+  try {
+    const res = await axios.post(
+      `${BASE_ENDPOINT}/auth/chat-lobby`,
+      { userId1: authUser._id, userId2: recipient.participants[1] }
+    );
+    setCredentials((prev) => ({ ...prev, room: res.data.chatLobbyId }));
+    // your fetch‐messages effect will fire automatically and clear isLoading when done
+  } catch (err) {
+    console.error("Error creating/fetching chat lobby", err);
+    setIsLoading(false);
+  }
+};
+
 
   // Send text messages.
   const handleMessageSubmit = (e) => {
@@ -635,6 +508,9 @@ useEffect(() => {
         { text: input, sender: authUser._id, room: credentials.room },
         () => {
           setInput("");
+           if (chatContentRef.current) {
+          chatContentRef.current.scrollTop = chatContentRef.current.scrollHeight;
+        }
         }
       );
     }
@@ -685,7 +561,6 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
         return xhr;
       },
       success: function (fileData) {
-        console.log("Upload Complete", fileData);
         $("#upload-progress-bar").addClass("progress-hide");
         if (socket) {
           socket.emit("newFileMessage", fileData);
@@ -967,6 +842,7 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
                   // existing chat lobby entry
                   const usr = item;
                   const count = unseenCount[usr._id] || 0;
+                  const isActive = usr.chatLobbyId === credentials.room;
                   const otherUser =
                     usr.participants[0]._id === credentials.userId
                       ? usr.participants[1]
@@ -979,9 +855,15 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
                   return (
                     <li
                       key={usr.chatLobbyId}
-                      className="clearfix"
-                      onClick={() => handleUserClick(usr)}
-                      style={{ cursor: "pointer" }}
+                       className={`clearfix ${isActive ? 'active-lobby' : ''}`}
+                      onClick={isActive ? undefined : () => handleUserClick(usr)}
+                      style={{
+              cursor: isActive ? 'default' : 'pointer',
+              backgroundColor: isActive ? '#e6f7ff' : 'transparent',
+              borderLeft: isActive ? '4px solid #1890ff' : 'none',
+              paddingLeft: isActive ? '8px' : '12px',
+              opacity: 1,
+            }}
                     >
                       <img
                         src={profilepic}
@@ -1130,47 +1012,8 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
             )}
           </div>
 
-          {/* Right: Call & Menu Icons */}
           <div style={{ display: "flex", alignItems: "center", marginLeft: "auto" }}>
-            {callRole === "caller" ? (
-              isCalling ? (
-                <>
-                  <span style={{ marginRight: "10px" }}>Calling...</span>
-                  <i
-                    className="mdi mdi-phone-hangup"
-                    style={{
-                      fontSize: "24px",
-                      cursor: "pointer",
-                      color: "red",
-                    }}
-                    onClick={endCall}
-                    title="End Call"
-                  ></i>
-                </>
-              ) : (
-                <i
-                  className="mdi mdi-phone"
-                  style={{
-                    fontSize: "24px",
-                    cursor: "pointer",
-                    marginRight: "15px",
-                  }}
-                  onClick={handleCallPress}
-                  title="Start Call"
-                ></i>
-              )
-            ) : (
-              <i
-                className="mdi mdi-phone"
-                style={{
-                  fontSize: "24px",
-                  cursor: "pointer",
-                  marginRight: "15px",
-                }}
-                onClick={handleCallPress}
-                title="Start Call"
-              ></i>
-            )}
+             
             <div className="dropdown">
               <i
                 className="mdi mdi-dots-vertical"
@@ -1219,15 +1062,31 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
               wordBreak: "break-word", // Ensures long messages wrap properly
             }}
           >
-            {isLoading ? (
-              <div style={{ textAlign: "center", padding: "20px" }}>
-                Loading messages...
-              </div>
-            ) : (
-              chats.map((chat, index) =>
-                renderMessage(chat, index, index === chats.length - 1)
-              )
-            )}
+              {!hasMore && page > 0 && (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "10px",
+        color: "#999",
+        fontStyle: "italic",
+      }}
+    >
+      — No more messages —
+    </div>
+  )}
+            {isLoading && page > 0 && (
+          <div style={{ textAlign: 'center', padding: '10px' }}>Loading more...</div>
+        )}
+        {chats.map((chat, idx) => {
+          const label = getDateLabel(chat.timestamp);
+          const prevLabel = idx > 0 ? getDateLabel(chats[idx - 1].timestamp) : null;
+          return (
+            <React.Fragment key={chat.id || idx}>
+              {(idx === 0 || label !== prevLabel) && <DateSeparator label={label} />}
+              {renderMessage(chat, idx, idx === chats.length - 1)}
+            </React.Fragment>
+          );
+        })}
           </div>
 
           {/* Chat Input Form */}
@@ -1288,101 +1147,9 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
   </div>
 </div>
 
-      {/* Hidden audio element */}
-      <audio ref={audioRef} autoPlay style={{ display: "none" }} />
       <Script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" />
       <Script src="https://cdnjs.cloudflare.com/ajax/libs/nicescroll/3.7.6/jquery.nicescroll.min.js" />
 
-      {/* Call Modal */}
-      {showCallModal && (
-        <>
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              backgroundColor: "rgba(0,0,0,0.5)",
-              zIndex: 9999,
-            }}
-          />
-          <div
-            style={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              zIndex: 10000,
-              background: "white",
-              padding: "20px",
-              borderRadius: "8px",
-              width: "300px",
-              textAlign: "center",
-            }}
-          >
-            {callRole === "caller" ? (
-              <>
-                {!callAccepted ? (
-                  <>
-                    <h5>Calling...</h5>
-                    <button className="btn btn-danger" onClick={endCall}>
-                      End Call
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <h5>Call in progress</h5>
-                    <div>Time: {formatTime(callTime)}</div>
-                    <button className="btn btn-danger" onClick={endCall}>
-                      End Call
-                    </button>
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                {!callAccepted ? (
-                  <>
-                    <h5>
-                      Incoming call from{" "}
-                      {incomingCall && incomingCall.username}
-                    </h5>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-around",
-                        marginTop: "15px",
-                      }}
-                    >
-                      <button
-                        className="btn btn-success"
-                        onClick={handleAcceptCall}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        onClick={handleRejectCall}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <h5>Call in progress</h5>
-                    <div>Time: {formatTime(callTime)}</div>
-                    <button className="btn btn-danger" onClick={endCall}>
-                      End Call
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </>
-      )}
     </>
   );
 }

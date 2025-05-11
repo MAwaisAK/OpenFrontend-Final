@@ -19,8 +19,7 @@ const MyTribes = () => {
         if (user?.joined_tribes?.length > 0) {
           const tribeIds = user.joined_tribes.map(tribe => tribe._id || tribe); // Support both full objects and ID strings
           const fullTribesData = await getTribesByIds(tribeIds); // Fetch full tribe data from backend
-          setTribesData(fullTribesData); // Set the fetched data into state
-          console.log("Fetched Full Tribe Data:", fullTribesData);
+          setTribesData(fullTribesData); // Set the fetched data into stat
         }
       } catch (error) {
         console.error("Error fetching tribe details:", error);
@@ -43,8 +42,6 @@ const MyTribes = () => {
   }, []);
 
     useEffect(() => {
-      // Log the updated tribesData state here, ensuring that it's updated correctly.
-      console.log("Updated Tribes Data:", tribesData);
     }, [tribesData]); // This will log whenever tribesData is updated
 
   return (

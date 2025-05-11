@@ -120,10 +120,6 @@ const EditTribe = () => {
     if (thumbnail) data.append("thumbnail", thumbnail);
     if (banner) data.append("banner", banner);
   
-    // 👇 Add this to print all FormData entries
-    for (let pair of data.entries()) {
-      console.log(pair[0], pair[1]);
-    }
   
     try {
       await axios.put(

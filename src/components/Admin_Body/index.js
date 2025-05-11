@@ -78,7 +78,6 @@ useEffect(() => {
     try {
       const data = await fetchLastFourReports(); // API you already created
       setLastFourReports(data.reports || []);
-      console.log(data.reports);
     } catch (error) {
       console.error("Error fetching reports:", error);
     }

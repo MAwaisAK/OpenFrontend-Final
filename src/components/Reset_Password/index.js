@@ -25,7 +25,6 @@ const ResetPassword = () => {
       setErrorMessage("");
 
       try {
-        console.log(frontendUrl);
         await resetPassword(token, values.newPassword, values.confirmPassword,values.frontend);
         setSuccessMessage("Your password has been reset successfully! Redirecting...");
         setTimeout(() => {

@@ -40,7 +40,6 @@ const Payment = () => {
     fetchAllPayments()
       .then((res) => setPayments(res.payments))
       .catch((err) => console.error("Error fetching payments:", err));
-      console.log(payments);
   }, []);
 
   // 3) When DataTables script loads:
@@ -117,8 +116,6 @@ const Payment = () => {
       alert("Failed to refund.");
     }
   };
-
-  console.log(payments);
 
   return (
     <>

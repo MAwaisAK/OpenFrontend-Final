@@ -177,7 +177,12 @@ export default function Home() {
         {/* Hero Section */}
         <section id="hero" className="hero section dark-background">
           {landingImage ? (
-            <img src={landingImage} alt="Landing Banner" data-aos="fade-in" />
+         <img
+         src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingImage}`}
+         alt="Landing Banner"
+         data-aos="fade-in"
+       />
+       
           ) : null}
           <div className="container d-flex flex-column align-items-center text-center">
             <h2 data-aos="fade-up" data-aos-delay={100}>
@@ -201,7 +206,7 @@ export default function Home() {
             <div className="row gy-4">
               <div className="col-lg-6 order-1 order-lg-2" data-aos="fade-up" data-aos-delay={100}>
                 {landingMiniImage ? (
-                  <img src={landingMiniImage} alt="Landing Mini Banner" data-aos="fade-in" />
+                  <img src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingMiniImage}`} alt="Landing Mini Banner" data-aos="fade-in" />
                 ) : null}
               </div>
               <div className="col-lg-6 order-2 order-lg-1 content" data-aos="fade-up" data-aos-delay={200}>
