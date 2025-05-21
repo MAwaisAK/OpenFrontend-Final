@@ -9,10 +9,42 @@ import Resources from "../Admin_Scripts";
 import { TextEditor } from "./TextEditor";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import {
+  fetchMe
+} from "@/app/api"; // Import new API functions
 
 const EditTool = () => {
   const router = useRouter();
-  const { id } = useParams(); // the tool ID from URL
+  const { id } = useParams();
+  const [me, setMe] = useState(null); // <- new state for current user
+  const [loading3, setLoading3] = useState(true); // <- new state for current user
+  const [loading2, setLoading2] = useState(true); // <- new state for current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
+
+  // --- State for basic fields ---
   const [formData, setFormData] = useState({
     title: "",
     toolCategory: "Tech",
@@ -21,141 +53,123 @@ const EditTool = () => {
     externalLink: "",
     shortdescription: ""
   });
-  
-  // Thumbnail file and its preview URL.
+
+  // --- Thumbnail state ---
   const [thumbnail, setThumbnail] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
+
+  // --- Parallel arrays for price-heading & price-detail ---
+  const [priceHeading, setPriceHeading] = useState([""]);
   const [existingThumbnail, setExistingThumbnail] = useState(null);
+  const [priceDetail, setPriceDetail] = useState([""]);
 
-  // Dynamic heading & detail pairs – each pair is an object.
-  const [headingPairs, setHeadingPairs] = useState([{ heading: "", detail: "" }]);
-
-  // Fetch tool details when component mounts.
+  // Load existing tool data
   useEffect(() => {
-    if (id) {
-      axios
-        .get(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/tool/${id}`)
-        .then((response) => {
-          const tool = response.data;
-          setFormData({
-            title: tool.title || "",
-            toolCategory: tool.toolCategory || "Tech",
-            description: tool.description || "",
-            content: tool.content || "",
-            externalLink: tool.externalLink || "",
-            shortdescription: tool.shortdescription || ""
-          });
-          if (tool.thumbnail) {
-            setExistingThumbnail(tool.thumbnail);
-            setThumbnailPreview(tool.thumbnail);
-          }
-          // Assume tool.heading and tool.details are arrays.
-          if (tool.heading && tool.details) {
-            const pairs = tool.heading.map((h, index) => ({
-              heading: h,
-              detail: tool.details[index] || ""
-            }));
-            setHeadingPairs(pairs);
-          } else {
-            setHeadingPairs([{ heading: "", detail: "" }]);
-          }
-        })
-        .catch((err) => {
-          console.error("Error fetching tool details:", err);
+    if (!id) return;
+
+    axios.get(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/tool/${id}`)
+      .then(({ data: tool }) => {
+        // Populate basic fields
+        setFormData({
+          title: tool.title || "",
+          toolCategory: tool.toolCategory || "Tech",
+          description: tool.description || "",
+          content: tool.content || "",
+          externalLink: tool.externalLink || "",
+          shortdescription: tool.shortdescription || ""
         });
-    }
+
+        // Thumbnail preview
+        if (tool.thumbnail) {
+          setThumbnailPreview(tool.thumbnail);
+          setExistingThumbnail(tool.thumbnail);
+        }
+
+        // Parse price_heading & price (could be JSON strings or arrays)
+        const ph = Array.isArray(tool.price_heading)
+          ? tool.price_heading
+          : (tool.price_heading ? JSON.parse(tool.price_heading) : []);
+        const pd = Array.isArray(tool.price)
+          ? tool.price
+          : (tool.price ? JSON.parse(tool.price) : []);
+
+        setPriceHeading(ph.length ? ph : [""]);
+        setPriceDetail(pd.length ? pd : [""]);
+      })
+      .catch(console.error);
   }, [id]);
 
-  const handleChange = (e) => {
+  // Handle input changes for basic fields
+  const handleChange = e => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(fd => ({ ...fd, [name]: value }));
   };
 
-  const handleThumbnailChange = (e) => {
+  // Thumbnail change
+  const handleThumbnailChange = e => {
     const file = e.target.files[0];
     setThumbnail(file);
-    if (file) {
-      setThumbnailPreview(URL.createObjectURL(file));
-    }
+    setThumbnailPreview(file ? URL.createObjectURL(file) : existingThumbnail);
   };
 
-  const handleHeadingPairChange = (index, field, value) => {
-    setHeadingPairs((prev) => {
-      const newPairs = [...prev];
-      newPairs[index] = { ...newPairs[index], [field]: value };
-      return newPairs;
-    });
-  };
 
-  const addHeadingPair = () => {
-    setHeadingPairs((prev) => [...prev, { heading: "", detail: "" }]);
-  };
-
-  const removeHeadingPair = (index) => {
-    setHeadingPairs((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // When the description content changes.
-  const handleDescriptionChange = (content) => {
-    setFormData((prev) => ({ ...prev, description: content }));
-  };
-
-  // When the content (rich text) changes.
-  const handleContentChange = (content) => {
-    setFormData((prev) => ({ ...prev, content }));
-  };
-
-  // Function to inject inline table border styles (if needed)
-  const injectTableBorders = (htmlString) => {
-    if (!htmlString) return htmlString;
-    const container = document.createElement("div");
-    container.innerHTML = htmlString;
-    container.querySelectorAll("table").forEach((table) => {
-      const currentStyle = table.getAttribute("style") || "";
-      const borderStyle = "border: 1px solid #000; border-collapse: collapse;";
-      table.setAttribute("style", currentStyle + borderStyle);
-      table.querySelectorAll("th, td").forEach((cell) => {
-        const cellCurrentStyle = cell.getAttribute("style") || "";
-        cell.setAttribute("style", cellCurrentStyle + "border: 1px solid #000;");
+  // Inject borders into any <table> in the HTML string
+  const injectTableBorders = html => {
+    if (!html) return html;
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    div.querySelectorAll("table").forEach(tbl => {
+      tbl.style.cssText += "border:1px solid #000;border-collapse:collapse;";
+      tbl.querySelectorAll("th,td").forEach(c => {
+        c.style.cssText += "border:1px solid #000;";
       });
     });
-    return container.innerHTML;
+    return div.innerHTML;
   };
 
-  const handleSubmit = async (e) => {
+  // Handlers for the rich-text editors
+  const handleDescriptionChange = content =>
+    setFormData(fd => ({ ...fd, description: content }));
+  const handleContentChange = content =>
+    setFormData(fd => ({ ...fd, content }));
+
+  // Handlers for price-heading & price-detail arrays
+  const handleHeadingChange = (idx, val) => {
+    setPriceHeading(ph => ph.map((v, i) => i === idx ? val : v));
+  };
+  const handleDetailChange = (idx, val) => {
+    setPriceDetail(pd => pd.map((v, i) => i === idx ? val : v));
+  };
+  const addPriceRow = () => {
+    setPriceHeading(ph => [...ph, ""]);
+    setPriceDetail(pd => [...pd, ""]);
+  };
+  const removePriceRow = idx => {
+    setPriceHeading(ph => ph.filter((_, i) => i !== idx));
+    setPriceDetail(pd => pd.filter((_, i) => i !== idx));
+  };
+
+  // On submit, assemble FormData and send
+  const handleSubmit = async e => {
     e.preventDefault();
-
-    // Inject inline table styles into description and content
-    const updatedDescription = injectTableBorders(formData.description);
-    const updatedContent = injectTableBorders(formData.content);
-
-    // Update headingPairs details with injected table borders
-    const updatedHeadingPairs = headingPairs.map((pair) => ({
-      heading: pair.heading,
-      detail: injectTableBorders(pair.detail)
-    }));
-
     const data = new FormData();
 
-    // Append basic fields with the updated HTML content.
+    // Inject borders
+    data.append("description", injectTableBorders(formData.description));
+    data.append("content", injectTableBorders(formData.content));
+
+    // Basic fields
     data.append("title", formData.title);
     data.append("toolCategory", formData.toolCategory);
     data.append("shortdescription", formData.shortdescription);
-    data.append("description", updatedDescription);
-    data.append("content", updatedContent);
     data.append("externalLink", formData.externalLink);
 
-    // Append the thumbnail file if a new file is selected.
-    if (thumbnail) {
-      data.append("thumbnail", thumbnail);
-    }
+    // Thumbnail if newly selected
+    if (thumbnail) data.append("thumbnail", thumbnail);
 
-    // Convert headingPairs into two arrays: one for headings and one for details.
-    const headingsArray = updatedHeadingPairs.map((pair) => pair.heading);
-    const detailsArray = updatedHeadingPairs.map((pair) => pair.detail);
-
-    data.append("heading", JSON.stringify(headingsArray));
-    data.append("details", JSON.stringify(detailsArray));
+    // Append price arrays as multiple form fields
+    priceHeading.forEach(h => data.append("price_heading", h));
+    priceDetail.forEach(d => data.append("price", d));
 
     try {
       await axios.put(
@@ -164,218 +178,209 @@ const EditTool = () => {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
       alert("Tool updated successfully.");
-      router.push("/admin/opulententrepreneurs/open/tools"); // redirect to tools list after update
-    } catch (error) {
-      console.error("Error updating tool:", error);
+      router.push("/admin/opulententrepreneurs/open/tools");
+    } catch (err) {
+      console.error(err);
       alert("Error updating tool.");
     }
   };
+
+  // Renders the dynamic Price & Detail panel
+  const renderPricePanel = () => (
+    <div className="form-group row mb-4">
+      <label className="col-md-3 col-form-label">Price & Detail</label>
+      <div className="col-md-7">
+        {priceHeading.map((h, i) => (
+          <div key={i} className="d-flex mb-2">
+            <input
+              type="text"
+              className="form-control mr-2"
+              placeholder="Heading (e.g. Free)"
+              value={h}
+              onChange={e => handleHeadingChange(i, e.target.value)}
+              required
+            />
+            <input
+              type="number"
+              className="form-control mr-2"
+              placeholder="Detail (e.g. 0)"
+              value={priceDetail[i]}
+              onChange={e => handleDetailChange(i, e.target.value)}
+              required
+            />
+            {priceHeading.length > 1 && (
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => removePriceRow(i)}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={addPriceRow}
+        >
+          Add Row
+        </button>
+      </div>
+    </div>
+  );
+
+
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   return (
     <>
       <Resources />
       <div id="app">
         <div className="main-wrapper main-wrapper-1">
-          <div className="navbar-bg"></div>
+          <div className="navbar-bg" />
           <Navbar />
           <Sidebar />
+
           <div className="main-content">
             <section className="section">
               <div className="section-body">
-                <div className="row">
-                  <div className="col-12">
-                    <div className="card">
-                      <div className="card-header">
-                        <h4>Edit Tool</h4>
+
+                <div className="card">
+                  <div className="card-header">
+                    <h4>Edit Tool</h4>
+                  </div>
+                  <div className="card-body">
+                    <form onSubmit={handleSubmit}>
+
+                      {/* Title */}
+                      <div className="form-group row mb-4">
+                        <label className="col-md-3 col-form-label">Title</label>
+                        <div className="col-md-7">
+                          <input
+                            name="title"
+                            value={formData.title}
+                            onChange={handleChange}
+                            className="form-control"
+                            required
+                          />
+                        </div>
                       </div>
-                      <div className="card-body">
-                        <form onSubmit={handleSubmit}>
-                          {/* Title */}
-                          <div className="form-group row mb-4">
-                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-                              Title
-                            </label>
-                            <div className="col-sm-12 col-md-7">
-                              <input
-                                type="text"
-                                className="form-control"
-                                name="title"
-                                value={formData.title}
-                                onChange={handleChange}
-                                required
-                              />
-                            </div>
-                          </div>
 
-                          {/* Tool Category */}
-                          <div className="form-group row mb-4">
-                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-                              Type
-                            </label>
-                            <div className="col-sm-12 col-md-7">
-                              <select
-                                className="form-control selectric"
-                                name="toolCategory"
-                                value={formData.toolCategory}
-                                onChange={handleChange}
-                              >
-                                <option value="Tech">Tech</option>
-                                <option value="News">News</option>
-                                <option value="Political">Political</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Short Description */}
-                          <div className="form-group row mb-4">
-                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-                              Short Description
-                            </label>
-                            <div className="col-sm-12 col-md-7">
-                              <textarea
-                                type="text"
-                                className="form-control"
-                                name="shortdescription"
-                                value={formData.shortdescription}
-                                onChange={handleChange}
-                                required
-                              ></textarea>
-                            </div>
-                          </div>
-
-                          {/* Description using TextEditor */}
-                          <div className="form-group row mb-4">
-                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-                              Description
-                            </label>
-                            <div className="col-sm-12 col-md-7">
-                              <TextEditor
-                                onChange={handleDescriptionChange}
-                                initialValue={formData.description}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Content using TextEditor */}
-                          <div className="form-group row mb-4">
-                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-                              Content
-                            </label>
-                            <div className="col-sm-12 col-md-7">
-                              <TextEditor
-                                onChange={handleContentChange}
-                                initialValue={formData.content}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Thumbnail with Preview */}
-                          <div className="form-group row mb-4">
-                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-                              Thumbnail
-                            </label>
-                            <div className="col-sm-12 col-md-7">
-                              <div id="image-preview" className="image-preview">
-                                <label htmlFor="image-upload" id="image-label">
-                                  {existingThumbnail ? "Change File" : "Choose File"}
-                                </label>
-                                <input
-                                  type="file"
-                                  name="thumbnail"
-                                  id="image-upload"
-                                  onChange={handleThumbnailChange}
-                                />
-                                {thumbnailPreview && (
-                                  <img
-                                    src={thumbnailPreview}
-                                    alt="Thumbnail Preview"
-                                    style={{ width: "200px", marginTop: "10px" }}
-                                  />
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Heading & Detail Pairs */}
-                          <div className="form-group row mb-4">
-                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-                              Headings & Details
-                            </label>
-                            <div className="col-sm-12 col-md-7">
-                              {headingPairs.map((pair, index) => (
-                                <div key={index}>
-                                  {headingPairs.length > 1 && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-danger"
-                                      onClick={() => removeHeadingPair(index)}
-                                    >
-                                      Remove
-                                    </button>
-                                  )}
-                                  <div className="d-flex mb-2">
-                                    <input
-                                      type="text"
-                                      className="form-control mr-2"
-                                      placeholder="Heading"
-                                      value={pair.heading}
-                                      onChange={(e) =>
-                                        handleHeadingPairChange(index, "heading", e.target.value)
-                                      }
-                                      required
-                                    />
-                                    <TextEditor
-                                      onChange={(content) =>
-                                        handleHeadingPairChange(index, "detail", content)
-                                      }
-                                      initialValue={pair.detail}
-                                    />
-                                  </div>
-                                </div>
-                              ))}
-                              <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={addHeadingPair}
-                              >
-                                Add Heading & Detail
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* External Link */}
-                          <div className="form-group row mb-4">
-                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-                              External Link
-                            </label>
-                            <div className="col-sm-12 col-md-7">
-                              <input
-                                type="text"
-                                className="form-control"
-                                name="externalLink"
-                                value={formData.externalLink}
-                                onChange={handleChange}
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          {/* Submit Button */}
-                          <div className="form-group row mb-4">
-                            <div className="col-sm-12 col-md-7 offset-md-3">
-                              <button type="submit" className="btn btn-primary">
-                                Update Tool
-                              </button>
-                            </div>
-                          </div>
-                        </form>
+                      {/* Category */}
+                      <div className="form-group row mb-4">
+                        <label className="col-md-3 col-form-label">Type</label>
+                        <div className="col-md-7">
+                          <select
+                            name="toolCategory"
+                            value={formData.toolCategory}
+                            onChange={handleChange}
+                            className="form-control"
+                          >
+                            <option>Tech</option>
+                            <option>News</option>
+                            <option>Political</option>
+                          </select>
+                        </div>
                       </div>
-                    </div>
+
+                      {/* Short Description */}
+                      <div className="form-group row mb-4">
+                        <label className="col-md-3 col-form-label">
+                          Short Description
+                        </label>
+                        <div className="col-md-7">
+                          <textarea
+                            name="shortdescription"
+                            value={formData.shortdescription}
+                            onChange={handleChange}
+                            className="form-control"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div className="form-group row mb-4">
+                        <label className="col-md-3 col-form-label">Description</label>
+                        <div className="col-md-7">
+                          <TextEditor
+                            initialValue={formData.description}
+                            onChange={handleDescriptionChange}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div className="form-group row mb-4">
+                        <label className="col-md-3 col-form-label">Content</label>
+                        <div className="col-md-7">
+                          <TextEditor
+                            initialValue={formData.content}
+                            onChange={handleContentChange}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Thumbnail */}
+                      <div className="form-group row mb-4">
+                        <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
+                          Thumbnail
+                        </label>
+                        <div className="col-sm-12 col-md-7">
+                          <div id="image-preview" className="image-preview">
+                            <label htmlFor="image-upload" id="image-label">
+                              {existingThumbnail ? "Change File" : "Choose File"}
+                            </label>
+                            <input
+                              type="file"
+                              name="thumbnail"
+                              id="image-upload"
+                              onChange={handleThumbnailChange}
+                            />
+                            {thumbnailPreview && (
+                              <img
+                                src={thumbnailPreview}
+                                alt="Thumbnail Preview"
+                                style={{ width: "200px", marginTop: "10px" }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Price & Detail */}
+                      {renderPricePanel()}
+
+                      {/* External Link */}
+                      <div className="form-group row mb-4">
+                        <label className="col-md-3 col-form-label">External Link</label>
+                        <div className="col-md-7">
+                          <input
+                            name="externalLink"
+                            value={formData.externalLink}
+                            onChange={handleChange}
+                            className="form-control"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Submit */}
+                      <div className="form-group row mb-4">
+                        <div className="col-md-7 offset-md-3">
+                          <button className="btn btn-success">Update Tool</button>
+                        </div>
+                      </div>
+
+                    </form>
                   </div>
                 </div>
+
               </div>
             </section>
-            {/* (Optional: Add a settings sidebar here if needed) */}
           </div>
         </div>
       </div>

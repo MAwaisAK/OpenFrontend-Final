@@ -5,10 +5,41 @@ import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
 import Script from "next/script";
+import { useRouter } from "next/navigation";
+import { fetchMe } from "@/app/api";
 import "../../styles/admin_assets/css/app.min.css";
 import "../../styles/admin_assets/css/components.css";
 
 export default function ImageEditor() {
+  const [me, setMe] = useState(null); // <- new state for current user
+  const router = useRouter();
+  const [loading3, setLoading3] = useState(true);
+  const [loading2, setLoading2] = useState(true);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
   // State for each image URL fetched from backend.
   const [landingImage, setLandingImage] = useState(null);
   const [landingMiniImage, setLandingMiniImage] = useState(null);
@@ -82,9 +113,9 @@ export default function ImageEditor() {
       } else if (fieldName === "dashboardimg") {
         endpoint = `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/images/update-dashboard`;
       } // You can add a similar route for dashboard if needed.
-      
+
       if (!endpoint) return;
-      
+
       const res = await axios.put(endpoint, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -112,6 +143,11 @@ export default function ImageEditor() {
       alert("Failed to update image.");
     }
   };
+
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
+
 
   return (
     <>

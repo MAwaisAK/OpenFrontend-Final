@@ -67,6 +67,9 @@ const MyTribes = () => {
               ? `url(${user.display_banner})`
               : "none",
             backgroundColor: user.display_banner ? "transparent" : "#007BFF", // solid blue fallback
+            backgroundSize: "cover",        // <-- scale to cover 100%
+            backgroundRepeat: "no-repeat",  // <-- don’t tile
+            backgroundPosition: "center",   // <-- center the image
           }}
         >
           {/* 

@@ -1,16 +1,45 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Script from "next/script";
+import { useRouter } from "next/navigation";
 import Resources from "../Admin_Scripts";
-import { fetchUserPrompts } from "@/app/api";
+import { fetchUserPrompts, fetchMe } from "@/app/api";
 import "../../styles/admin_assets/bundles/datatables/datatables.min.css";
 import "../../styles/admin_assets/bundles/datatables/DataTables-1.10.16/css/dataTables.bootstrap4.min.css";
 
 const UserPrompts = () => {
+  const [me, setMe] = useState(null); // <- new state for current user
+  const router = useRouter();
+  const [loading3, setLoading3] = useState(true);
+  const [loading2, setLoading2] = useState(true);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "ai")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
   const [prompts, setPrompts] = useState([]);
 
   // Fetch user prompts when component mounts
@@ -26,7 +55,7 @@ const UserPrompts = () => {
     getPrompts();
   }, []);
 
-  // Initialize DataTables once data is loaded
+
   useEffect(() => {
     if (typeof window !== "undefined" && window.$ && window.$.fn && window.$.fn.DataTable) {
       if (window.$.fn.DataTable.isDataTable('#table-1')) {
@@ -36,14 +65,13 @@ const UserPrompts = () => {
     }
   }, [prompts]);
 
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
+
   return (
     <>
       <Resources />
-      <Script src="/assets/admin_assets/bundles/jquery-selectric/jquery.selectric.min.js" strategy="beforeInteractive" />
-      <Script src="/assets/admin_assets/bundles/upload-preview/assets/js/jquery.uploadPreview.min.js" strategy="beforeInteractive" />
-      <Script src="/assets/admin_assets/bundles/summernote/summernote-bs4.js" strategy="beforeInteractive" />
-      <Script src="/assets/admin_assets/bundles/bootstrap-tagsinput/dist/bootstrap-tagsinput.min.js" strategy="beforeInteractive" />
-      <Script src="/assets/admin_assets/js/page/create-post.js" strategy="beforeInteractive" />
       <Script src="/assets/admin_assets/bundles/datatables/datatables.min.js" strategy="afterInteractive" />
       <div id="app">
         <div className="main-wrapper main-wrapper-1">

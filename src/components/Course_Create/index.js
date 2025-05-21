@@ -1,5 +1,5 @@
 "use client";
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
@@ -8,37 +8,66 @@ import { TextEditor } from "./TextEditor";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import {
-  fetchCoursesArray,
+  fetchCoursesArray, fetchMe
 } from "@/app/api"; // Import new API functions
+import { useRouter } from "next/navigation";
 
 const CreateCourse = () => {
+  const router = useRouter();
+  const [me, setMe] = useState(null); // <- new state for current user
+  const [loading3, setLoading3] = useState(true); // <- new state for current user
+  const [loading2, setLoading2] = useState(true); // <- new state for current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
   const [formData, setFormData] = useState({
     title: "",
     Author: "",
     AuthorLink: "",
     courseCategory: "Tech",
     description: "",
-    shortdescription:"",
+    shortdescription: "",
     courseContent: "",
     price: "",
   });
 
   const [tools, setTools] = useState([]);
-  
-    // Fetch initial categories (tools) on mount
-    useEffect(() => {
-      const fetchCategories = async () => {
-        try {
-          const response = await fetchCoursesArray();
-          // Assuming response.data is an array of tool categories
-          setTools(response.data || []);
-        } catch (error) {
-          console.error("Error fetching categories:", error);
-        }
-      };
-  
-      fetchCategories();
-    }, []);
+
+  // Fetch initial categories (tools) on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetchCoursesArray();
+        // Assuming response.data is an array of tool categories
+        setTools(response.data || []);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Thumbnail file and preview URL.
   const [thumbnail, setThumbnail] = useState(null);
@@ -188,7 +217,7 @@ const CreateCourse = () => {
   // On form submission, pack data into a FormData object.
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Inject inline table styles into description and courseContent.
     const updatedDescription = injectTableBorders(formData.description);
     const updatedCourseContent = injectTableBorders(formData.courseContent);
@@ -246,6 +275,9 @@ const CreateCourse = () => {
       alert("Error creating course.");
     }
   };
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   return (
     <>
@@ -348,32 +380,32 @@ const CreateCourse = () => {
 
                           {/* Course Category */}
                           <div className="form-group row mb-4">
-          <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-            Course Category
-          </label>
-          <div className="col-sm-12 col-md-7">
-            <select
-              className="form-control selectric"
-              name="toolCategory"
-              value={formData.toolCategory}
-              onChange={handleChange}
-            >
-              {tools && tools.length > 0 ? (
-                tools.map((tool, index) => (
-                  <option key={index} value={tool.category || tool}>
-                    {tool.category || tool}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="Tech">Tech</option>
-                  <option value="News">News</option>
-                  <option value="Political">Political</option>
-                </>
-              )}
-            </select>
-          </div>
-        </div>
+                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
+                              Course Category
+                            </label>
+                            <div className="col-sm-12 col-md-7">
+                              <select
+                                className="form-control selectric"
+                                name="toolCategory"
+                                value={formData.toolCategory}
+                                onChange={handleChange}
+                              >
+                                {tools && tools.length > 0 ? (
+                                  tools.map((tool, index) => (
+                                    <option key={index} value={tool.category || tool}>
+                                      {tool.category || tool}
+                                    </option>
+                                  ))
+                                ) : (
+                                  <>
+                                    <option value="Tech">Tech</option>
+                                    <option value="News">News</option>
+                                    <option value="Political">Political</option>
+                                  </>
+                                )}
+                              </select>
+                            </div>
+                          </div>
 
                           {/* Description */}
                           <div className="form-group row mb-4">
@@ -413,12 +445,12 @@ const CreateCourse = () => {
                                   required
                                 />
                                 {thumbnailPreview && (
-                                <img
-                                  src={thumbnailPreview}
-                                  alt="Thumbnail Preview"
-                                  style={{ width: "200px", marginTop: "10px" }}
-                                />
-                              )}
+                                  <img
+                                    src={thumbnailPreview}
+                                    alt="Thumbnail Preview"
+                                    style={{ width: "200px", marginTop: "10px" }}
+                                  />
+                                )}
                               </div>
                             </div>
                           </div>
@@ -453,7 +485,7 @@ const CreateCourse = () => {
                               )}
                             </div>
                           </div>
-                          
+
                           <div className="form-group row mb-4">
                             <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
                               Video Links

@@ -213,3 +213,37 @@ margin-top: 3px; /* Adds spacing between name and role */
     border-radius: 10px;
   }
   
+  .tab-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tab-list {
+  display: flex;
+  justify-content: space-around;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.tab-item {
+  flex: 1;
+  min-width: 80px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.tab-item.active {
+  border-bottom-color: #6c63ff; /* customize active indicator color */
+}
+
+@media (max-width: 600px) {
+  .tab-item {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+}

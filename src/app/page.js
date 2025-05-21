@@ -4,7 +4,7 @@ import Layout from "@/components/Layout";
 import Features from "@/components/Features";
 import Link from "next/link";
 import Testimonials from "@/components/Testimonals";
-import { fetchLandingImages, fetchBasicPremiumPricing,fetchDashboardStats } from "@/app/api";
+import { fetchLandingImages, fetchBasicPremiumPricing, fetchDashboardStats } from "@/app/api";
 import { useAuth } from "@/lib/AuthContext";
 
 // Updated Counter component using Intersection Observer
@@ -90,7 +90,7 @@ export default function Home() {
     courses: 0,
     tools: 0,
   });
-  
+
 
   const statSafe = (val) => (typeof val === "number" ? val : 0);
 
@@ -100,10 +100,10 @@ export default function Home() {
         const images = await fetchLandingImages();
         setLandingImage(images.landingImage);
         setLandingMiniImage(images.landingMiniImage);
-  
+
         const pricingData = await fetchBasicPremiumPricing();
         setPricing(pricingData);
-  
+
         const dashboardStats = await fetchDashboardStats();
         setStats({
           users: statSafe(dashboardStats.userCount),
@@ -111,7 +111,7 @@ export default function Home() {
           courses: statSafe(dashboardStats.coursesCount),
           tools: statSafe(dashboardStats.tools),
         });
-  
+
         // preload images
         const img1 = new Image();
         const img2 = new Image();
@@ -133,7 +133,7 @@ export default function Home() {
     }
     fetchData();
   }, []);
-  
+
 
   // Render a simple spinner while loading
   if (loading) {
@@ -177,12 +177,12 @@ export default function Home() {
         {/* Hero Section */}
         <section id="hero" className="hero section dark-background">
           {landingImage ? (
-         <img
-         src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingImage}`}
-         alt="Landing Banner"
-         data-aos="fade-in"
-       />
-       
+            <img
+              src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingImage}`}
+              alt="Landing Banner"
+              data-aos="fade-in"
+            />
+
           ) : null}
           <div className="container d-flex flex-column align-items-center text-center">
             <h2 data-aos="fade-up" data-aos-delay={100}>
@@ -204,11 +204,32 @@ export default function Home() {
         <section id="about" className="about section">
           <div className="container">
             <div className="row gy-4">
-              <div className="col-lg-6 order-1 order-lg-2" data-aos="fade-up" data-aos-delay={100}>
-                {landingMiniImage ? (
-                  <img src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingMiniImage}`} alt="Landing Mini Banner" data-aos="fade-in" />
-                ) : null}
-              </div>
+              <div
+  className="col-lg-6 order-1 order-lg-2"
+  data-aos="fade-up"
+  data-aos-delay={100}
+>
+  {landingMiniImage && (
+    <img
+      src={`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}${landingMiniImage}`}
+      alt="Landing Mini Banner"
+      data-aos="fade-in"
+      // Bootstrap’s img-fluid helps with responsiveness
+      className="img-fluid"
+      style={{
+        // Make it respond to container width
+        width: '100%',
+        // Force a 4:3 aspect ratio (400x300)
+        aspectRatio: '4/3',
+        // Ensure the image fills the box and is cropped appropriately
+        objectFit: 'cover',
+        // Prevent it from growing beyond your desired max size
+        maxWidth: '450px',
+      }}
+    />
+  )}
+</div>
+
               <div className="col-lg-6 order-2 order-lg-1 content" data-aos="fade-up" data-aos-delay={200}>
                 <h3 className="mt-3">
                   Unlock the Power of <br />
@@ -241,35 +262,35 @@ export default function Home() {
 
         {/* Counts Section */}
         <section id="counts" className="section counts light-background">
-  <div className="container" data-aos="fade-up" data-aos-delay={100}>
-    <div className="row gy-4">
-      <div className="col-lg-3 col-md-6">
-        <div className="stats-item text-center w-100 h-100">
-          <Counter start={0} end={stats.users} duration={1} />
-          <p>Users</p>
-        </div>
-      </div>
-      <div className="col-lg-3 col-md-6">
-        <div className="stats-item text-center w-100 h-100">
-          <Counter start={0} end={stats.tribes} duration={1} />
-          <p>Tribes</p>
-        </div>
-      </div>
-      <div className="col-lg-3 col-md-6">
-        <div className="stats-item text-center w-100 h-100">
-          <Counter start={0} end={stats.courses} duration={1} />
-          <p>Courses</p>
-        </div>
-      </div>
-      <div className="col-lg-3 col-md-6">
-        <div className="stats-item text-center w-100 h-100">
-          <Counter start={0} end={stats.tools} duration={1} />
-          <p>Tools</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+          <div className="container" data-aos="fade-up" data-aos-delay={100}>
+            <div className="row gy-4">
+              <div className="col-lg-3 col-md-6">
+                <div className="stats-item text-center w-100 h-100">
+                  <Counter start={0} end={stats.users} duration={1} />
+                  <p>Users</p>
+                </div>
+              </div>
+              <div className="col-lg-3 col-md-6">
+                <div className="stats-item text-center w-100 h-100">
+                  <Counter start={0} end={stats.tribes} duration={1} />
+                  <p>Tribes</p>
+                </div>
+              </div>
+              <div className="col-lg-3 col-md-6">
+                <div className="stats-item text-center w-100 h-100">
+                  <Counter start={0} end={stats.courses} duration={1} />
+                  <p>Courses</p>
+                </div>
+              </div>
+              <div className="col-lg-3 col-md-6">
+                <div className="stats-item text-center w-100 h-100">
+                  <Counter start={0} end={stats.tools} duration={1} />
+                  <p>Tools</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* /Counts Section */}
 
@@ -373,8 +394,8 @@ export default function Home() {
                 </div>
               </div>
             </div>
-           </section></div>
-       
+          </section></div>
+
         {/* Why Us Section */}
         <section id="why-us" className="section why-us">
           <div className="page-title mb-5" data-aos="fade-up" data-aos-delay={100}>
@@ -382,7 +403,7 @@ export default function Home() {
               <div className="container">
                 <div className="row d-flex justify-content-center text-center">
                   <div className="col-lg-8">
-                    <h1>OpEn?</h1>
+                    <h1>Why OpEn?</h1>
                   </div>
                 </div>
               </div>

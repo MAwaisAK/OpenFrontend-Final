@@ -14,6 +14,15 @@ import {
   fetchMe,
 } from "@/app/api";
 
+const initialNewAdmin = {
+  username: "",
+  password: "",
+  role: "admin",
+  level: "community",
+  email: "",
+  sendEmail: false, // <— always present
+};
+
 const Admins = () => {
   const router = useRouter();
   const [admins, setAdmins] = useState([]);
@@ -38,7 +47,7 @@ const Admins = () => {
 
   useEffect(() => {
     if (!loading && me) {
-      if (me.level !== "admin") {
+      if (me.level !== "super") {
         setRedirecting(true);
         router.replace("/admin/opulententrepreneurs/open/dashboard");
       }
@@ -51,42 +60,43 @@ const Admins = () => {
 
   // Load admins
   useEffect(() => {
-    const loadAdmins = async () => {
+    const loadAdmins = async (level) => {
       try {
-        const data = await fetchAllAdmins(accessToken);
+        const data = await fetchAllAdmins(level);
         setAdmins(data);
       } catch (err) {
         console.error("Failed to load admins", err);
       }
     };
-    if (accessToken) {
-      loadAdmins();
+
+    if (me?.level) {
+      loadAdmins(me.level);
     }
-  }, [accessToken]);
+  }, [me]);
 
   // Create Admin form state
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newAdmin, setNewAdmin] = useState({
-    username: "",
-    password: "",
-    role: "moderator",
-  });
+  const [newAdmin, setNewAdmin] = useState(initialNewAdmin);
+  const [createError, setCreateError] = useState(""); // ← new state
 
   const handleCreateToggle = () => {
     setShowCreateForm((v) => !v);
-    setNewAdmin({ username: "", password: "", role: "moderator" });
+    setNewAdmin(initialNewAdmin); // <— reset including sendEmail:false
   };
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     try {
-      const { admin: created } = await createAdmin(newAdmin, accessToken);
+      setCreateError("");
+      const { admin: created } = await createAdmin(newAdmin, me.level);
       setAdmins((prev) => [...prev, created]);
       handleCreateToggle();
       alert("Admin created.");
     } catch (err) {
       console.error(err);
-      alert("Error creating admin.");
+      // if the API responded with Boom.conflict
+      const msg = err?.response?.data?.message || "Error creating admin.";
+      setCreateError(msg);
     }
   };
 
@@ -94,14 +104,16 @@ const Admins = () => {
   const [editingAdminId, setEditingAdminId] = useState(null);
   const [editAdminData, setEditAdminData] = useState({
     username: "",
-    role: "moderator",
+    level: "community",
+    email: "",
   });
 
   const startEdit = (admin) => {
     setEditingAdminId(admin._id);
     setEditAdminData({
       username: admin.username,
-      role: admin.role,
+      level: admin.level,
+      email: admin.email || "",
     });
     setChangingPasswordId(null);
   };
@@ -111,19 +123,40 @@ const Admins = () => {
 
   const handleSaveEdit = async (e) => {
     e.preventDefault();
+    const original = admins.find((x) => x._id === editingAdminId);
+    const superCount = admins.filter((x) => x.level === "super").length;
+
+    // if they’re the last super and you’re trying to change them…
+    if (
+      original.level === "super" &&
+      superCount === 1 &&
+      editAdminData.level !== "super"
+    ) {
+      return alert("You must keep at least one Super Admin.");
+    }
     try {
       await updateAdminCredentials(
-        { adminId: editingAdminId, username: editAdminData.username },
-        accessToken
+        {
+          adminId: editingAdminId,
+          username: editAdminData.username,
+          email: editAdminData.email,
+        },
+        me.level
       );
+      console.log(editingAdminId, editAdminData.level);
       await updateAdminRole(
-        { adminId: editingAdminId, newRole: editAdminData.role },
-        accessToken
+        { adminId: editingAdminId, newlevel: editAdminData.level },
+        me.level
       );
       setAdmins((prev) =>
         prev.map((a) =>
           a._id === editingAdminId
-            ? { ...a, username: editAdminData.username, role: editAdminData.role }
+            ? {
+              ...a,
+              username: editAdminData.username,
+              level: editAdminData.level,
+              email: editAdminData.email,
+            }
             : a
         )
       );
@@ -139,7 +172,7 @@ const Admins = () => {
   const handleDelete = async (id) => {
     if (!confirm("Delete this admin?")) return;
     try {
-      await deleteAdmin(id, accessToken);
+      await deleteAdmin(id, me.level);
       setAdmins((prev) => prev.filter((a) => a._id !== id));
       alert("Admin deleted.");
     } catch (err) {
@@ -164,7 +197,7 @@ const Admins = () => {
     try {
       await updateAdminCredentials(
         { adminId: changingPasswordId, password: newPassword },
-        accessToken
+        me.level
       );
       setChangingPasswordId(null);
       alert("Password changed.");
@@ -173,6 +206,7 @@ const Admins = () => {
       alert("Error changing password.");
     }
   };
+  const superCount = admins.filter((a) => a.level === "super").length;
 
   if (loading || redirecting || !me) {
     return <div>Loading…</div>;
@@ -196,11 +230,15 @@ const Admins = () => {
 
             {showCreateForm && (
               <form className="card mb-4 p-3" onSubmit={handleCreateSubmit}>
+                {createError && (
+                  <div className="alert alert-danger">{createError}</div>
+                )}
                 <div className="mb-2">
                   <label className="form-label">Username</label>
                   <input
                     type="text"
-                    className="form-control"
+                    className={`form-control ${createError ? "is-invalid" : ""
+                      }`}
                     value={newAdmin.username}
                     onChange={(e) =>
                       setNewAdmin((p) => ({ ...p, username: e.target.value }))
@@ -221,17 +259,46 @@ const Admins = () => {
                   />
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Role</label>
+                  <label className="form-label">Level</label>
                   <select
                     className="form-select"
-                    value={newAdmin.role}
+                    value={newAdmin.level}
                     onChange={(e) =>
-                      setNewAdmin((p) => ({ ...p, role: e.target.value }))
+                      setNewAdmin((p) => ({ ...p, level: e.target.value }))
                     }
                   >
-                    <option value="moderator">Moderator</option>
-                    <option value="admin">Admin</option>
+                    <option value="community">Community Admin</option>
+                    <option value="super">Super Admin</option>
+                    <option value="finance">Finance Admin</option>
+                    <option value="ai">Ai Admin</option>
                   </select>
+                </div>
+                <label>Designated Email (optional)</label>
+                <input
+                  type="email"
+                  className="form-control mb-2"
+                  value={newAdmin.email}
+                  onChange={(e) =>
+                    setNewAdmin((p) => ({ ...p, email: e.target.value }))
+                  }
+                />
+
+                <div className="form-check mb-3">
+                  <input
+                    type="checkbox"
+                    id="sendEmail"
+                    className="form-check-input"
+                    checked={newAdmin.sendEmail} // controlled
+                    onChange={(e) =>
+                      setNewAdmin((p) => ({
+                        ...p,
+                        sendEmail: e.target.checked,
+                      }))
+                    }
+                  />
+                  <label htmlFor="sendEmail" className="form-check-label ml-0">
+                    Send credentials via email
+                  </label>
                 </div>
                 <button type="submit" className="btn btn-success">
                   Create
@@ -251,109 +318,160 @@ const Admins = () => {
                   </button>
                 </div>
               ) : (
-                admins.map((a) => (
-                  <div key={a._id} className="col-md-4 mb-4">
-                    <div className="card h-100">
-                      <div className="card-body">
-                        {editingAdminId === a._id ? (
-                          <form onSubmit={handleSaveEdit}>
-                            <div className="mb-2">
-                              <label className="form-label">Username</label>
-                              <input
-                                type="text"
-                                className="form-control"
-                                value={editAdminData.username}
-                                onChange={(e) =>
-                                  handleEditChange("username", e.target.value)
-                                }
-                                required
-                              />
-                            </div>
-                            <div className="mb-3">
-                              <label className="form-label">Role</label>
-                              <select
-                                className="form-select"
-                                value={editAdminData.role}
-                                onChange={(e) =>
-                                  handleEditChange("role", e.target.value)
-                                }
-                              >
-                                <option value="moderator">Moderator</option>
-                                <option value="admin">Admin</option>
-                              </select>
-                            </div>
-                            <button type="submit" className="btn btn-success me-2">
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              onClick={cancelEdit}
-                            >
-                              Cancel
-                            </button>
-                          </form>
-                        ) : changingPasswordId === a._id ? (
-                          <form onSubmit={handleChangePasswordSubmit}>
-                            <div className="mb-2">
-                              <label className="form-label">New Password</label>
-                              <input
-                                type="password"
-                                className="form-control"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                required
-                              />
-                            </div>
-                            <button type="submit" className="btn btn-success me-2">
-                              Change
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              onClick={cancelChangePassword}
-                            >
-                              Cancel
-                            </button>
-                          </form>
-                        ) : (
-                          <>
-                            <h5 className="card-title">{a.username}</h5>
-                            <p className="card-text">
-                              <strong>Password: </strong>********
-                            </p>
-                            <p className="card-text">
-                              <strong>Level: </strong> {a.level}
-                            </p>
-                            <div className="d-flex">
+                admins.map((a) => {
+                  // ✅ Now valid: this is inside a function block
+                  const isLastSuper = a.level === "super" && superCount === 1;
+                  const original = a;
+                  const hasChanges =
+                    editAdminData.username !== original.username ||
+                    editAdminData.email !== (original.email || "") ||
+                    editAdminData.level !== original.level;
+
+                  return (
+                    <div key={a._id} className="col-md-4 mb-4">
+                      <div className="card h-100">
+                        <div className="card-body">
+                          {editingAdminId === a._id ? (
+                            <form onSubmit={handleSaveEdit}>
+                              <div className="mb-2">
+                                <label className="form-label">Username</label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  value={editAdminData.username}
+                                  onChange={(e) =>
+                                    handleEditChange("username", e.target.value)
+                                  }
+                                  required
+                                />
+                              </div>
+                              <div className="mb-3">
+                                <label className="form-label">Level</label>
+                                <select
+                                  className="form-select"
+                                  value={editAdminData.level}
+                                  onChange={(e) =>
+                                    handleEditChange("level", e.target.value)
+                                  }
+                                  disabled={isLastSuper}
+                                >
+                                  <option value="community">
+                                    Community Admin
+                                  </option>
+                                  <option value="super">Super Admin</option>
+                                  <option value="finance">Finance Admin</option>
+                                  <option value="ai">Ai Admin</option>
+                                </select>
+                              </div>
+                              <div className="mb-2">
+                                <label className="form-label">
+                                  Designated Email
+                                </label>
+                                <input
+                                  type="email"
+                                  className="form-control"
+                                  value={editAdminData.email}
+                                  onChange={(e) =>
+                                    handleEditChange("email", e.target.value)
+                                  }
+                                />
+                              </div>
+                              {isLastSuper && (
+                                <div className="form-text text-warning">
+                                  Cannot demote the only Super Admin.
+                                </div>
+                              )}
                               <button
-                                className="btn btn-warning me-2"
-                                onClick={() => startEdit(a)}
+                                type="submit"
+                                className="btn btn-success me-2"
                               >
-                                Edit
+                                Save
                               </button>
                               <button
-                                className="btn btn-info me-2"
-                                onClick={() => startChangePassword(a._id)}
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={cancelEdit}
                               >
-                                Change Password
+                                Cancel
+                              </button>
+                            </form>
+                          ) : changingPasswordId === a._id ? (
+                            <form onSubmit={handleChangePasswordSubmit}>
+                              <div className="mb-2">
+                                <label className="form-label">
+                                  New Password
+                                </label>
+                                <input
+                                  type="password"
+                                  className="form-control"
+                                  value={newPassword}
+                                  onChange={(e) =>
+                                    setNewPassword(e.target.value)
+                                  }
+                                  required
+                                />
+                              </div>
+                              <button
+                                type="submit"
+                                className="btn btn-success me-2"
+                              >
+                                Change
                               </button>
                               <button
-                                className="btn btn-danger"
-                                onClick={() => handleDelete(a._id)}
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={cancelChangePassword}
                               >
-                                Delete
+                                Cancel
                               </button>
-                            </div>
-                          </>
-                        )}
+                            </form>
+                          ) : (
+                            <>
+                              <h5 className="card-title">{a.username}</h5>
+                              <p className="card-text">
+                                <strong>Password: </strong>********
+                              </p>
+                              <p className="card-text">
+                                <strong>Level: </strong> {a.level}
+                              </p>
+                              <p className="card-text">
+                                <strong>Designated Email: </strong>{" "}
+                                {a.email || "Not Assigned"}
+                              </p>
+                              <div className="d-flex">
+                                <button
+                                  className="btn btn-warning me-2"
+                                  onClick={() => startEdit(a)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="btn btn-info me-2"
+                                  onClick={() => startChangePassword(a._id)}
+                                >
+                                  Change Password
+                                </button>
+                                {!(
+                                  // hide if this is a super-admin and it's the only one
+                                  (a.level === "super" && superCount === 1)
+                                ) && (
+                                    <button
+                                      className="btn btn-danger"
+                                      onClick={() => handleDelete(a._id)}
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
-
           </div>
         </div>
       </div>

@@ -273,8 +273,8 @@ const MyTribes = () => {
       <div className="container p-4">
         <div className="row">
           {currentTribes.map((tribe, index) => (
-            <div className="col-md-4" key={index}>
-              <div className="profile-card minimal mb-4">
+                      <div className="col-12 col-md-4 d-flex justify-content-center" key={index}>
+  <div className="profile-card minimal mb-4" style={{ maxWidth: "360px", width: "100%" }}>
                 {/* Card header with banner as background image */}
                 <div
                   className="card-header"

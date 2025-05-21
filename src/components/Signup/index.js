@@ -55,8 +55,22 @@ const Signup = () => {
         router.push("/login"); // ✅ Now this will work
         }, 3000);
       } catch (error) {
-        bag.setErrors({ general: error.response?.data?.message || error.message });
-      }
+    const msg = error.response?.data?.message || error.message;
+    const status = error.response?.status;
+
+    // If it's a 409 conflict on username:
+    if (status === 409 && msg.toLowerCase().includes("username")) {
+      bag.setFieldError("username", msg);
+    }
+    // You could also detect email conflicts similarly:
+    else if (status === 409 && msg.toLowerCase().includes("e-mail")) {
+      bag.setFieldError("email", msg);
+    }
+    // Otherwise show a general error banner:
+    else {
+      bag.setErrors({ general: msg });
+    }
+  }
     },
   });
 
@@ -78,6 +92,11 @@ const Signup = () => {
                   <h6 className="font-weight-light text-center">Sign up in a few steps.</h6>
 
                   <form className="pt-3" onSubmit={formikSignup.handleSubmit}>
+                     {formikSignup.errors.general && (
+    <div className="alert alert-danger">
+      {formikSignup.errors.general}
+    </div>
+  )}
                     {/* First Name */}
                     <div className="form-group">
                       <input
@@ -107,18 +126,20 @@ const Signup = () => {
                     </div>
 
                     {/* Username */}
-                    <div className="form-group">
-                      <input
-                        type="text"
-                        name="username"
-                        className="form-control form-control-lg"
-                        placeholder="Username"
-                        {...formikSignup.getFieldProps("username")}
-                      />
-                      {formikSignup.touched.username && formikSignup.errors.username && (
-                        <div className="alert alert-danger">{formikSignup.errors.username}</div>
-                      )}
-                    </div>
+                   <div className="form-group">
+    <input
+      type="text"
+      name="username"
+      className="form-control form-control-lg"
+      placeholder="Username"
+      {...formikSignup.getFieldProps("username")}
+    />
+    {formikSignup.touched.username && formikSignup.errors.username && (
+      <div className="alert alert-danger">
+        {formikSignup.errors.username}
+      </div>
+    )}
+  </div>
 
                     {/* Email */}
                     <div className="form-group">

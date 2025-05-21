@@ -4,11 +4,10 @@ import Content from "./content";
 const MyTribes = () => {
   return (
     <>
-    <Navbar/>
+    {/*<Navbar />*/}
       <div className="container-fluid page-body-wrapper">
         <Sidebar/>
         <div className="main-panel">
-        <h1 className="text-center mt-4 mb-1 mx-auto">Tribes</h1>
 
        <div className="form-group">
                       

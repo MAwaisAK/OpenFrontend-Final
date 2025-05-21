@@ -5,12 +5,41 @@ import Sidebar from "../Admin_Sidebar";
 import Script from "next/script";
 import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
-import { fetchSupportReports, updateSupportReportStatus } from "@/app/api";
+import { useRouter } from "next/navigation";
+import { fetchSupportReports, updateSupportReportStatus, fetchMe } from "@/app/api";
 import "datatables.net-bs4";
 import "../../styles/admin_assets/bundles/datatables/datatables.min.css";
 import "../../styles/admin_assets/bundles/datatables/DataTables-1.10.16/css/dataTables.bootstrap4.min.css";
 
 const UserReports = () => {
+   const router = useRouter();
+    const [me, setMe] = useState(null); // <- new state for current user
+    const [loading3, setLoading3] = useState(true); // <- new state for current user
+    const [loading2, setLoading2] = useState(true); // <- new state for current user
+    useEffect(() => {
+      const getCurrentUser = async () => {
+        try {
+          const response = await fetchMe();
+          setMe(response); // assuming response contains user object directly
+        } catch (error) {
+          console.error("Error fetching current user:", error);
+        } finally {
+          setLoading3(false); // <- Move here to ensure it always runs after fetch
+        }
+      };
+  
+      getCurrentUser();
+    }, []);
+  
+    useEffect(() => {
+      if (!loading3) {
+        if (me && (me.level !== "super" && me.level !== "community"  && me.level !== "finance")) {
+          router.push("/admin/opulententrepreneurs/open/dashboard");
+        } else {
+          setLoading2(false); // Only allow render when authorized
+        }
+      }
+    }, [me, loading3]);
   const [reports, setReports] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [modalDescription, setModalDescription] = useState("");
@@ -25,7 +54,8 @@ const UserReports = () => {
     const fetchReports = async () => {
       try {
         const data = await fetchSupportReports();
-        setReports(data);
+        const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setReports(sorted);
       } catch (error) {
         console.error("Error fetching user reports:", error);
       }
@@ -85,6 +115,9 @@ const UserReports = () => {
     setModalDescription(description);
     setShowModal(true);
   };
+    if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   return (
     <>
@@ -143,6 +176,7 @@ const UserReports = () => {
                                 <th>Type</th>
                                 <th>Description</th>
                                 <th>Status</th>
+                                 <th>Created At</th> {/* NEW */}
                                 <th style={{ display: "none" }}>Raw Status</th>
                               </tr>
                             </thead>
@@ -185,6 +219,10 @@ const UserReports = () => {
                                         report.Description
                                       )}
                                     </td>
+                                    <td>
+  {new Date(report.createdAt).toLocaleString()}
+</td>
+
                                     <td>
                                       <select
                                         value={report.status}

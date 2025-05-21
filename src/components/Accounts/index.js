@@ -5,9 +5,11 @@ import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
 import Script from "next/script";
-import { fetchUsers, updateUsers,fetchMe,deleteUserById } from "@/app/api";
+import { fetchUsers, updateUsers, fetchMe, deleteUserById } from "@/app/api";
 import '../../styles/admin_assets/bundles/datatables/datatables.min.css';
 import '../../styles/admin_assets/bundles/datatables/DataTables-1.10.16/css/dataTables.bootstrap4.min.css';
+import { useRouter } from "next/navigation"; // Next.js 13+ router
+
 
 const API_BASE = process.env.NEXT_PUBLIC_BASE_ENDPOINT;
 
@@ -36,7 +38,18 @@ const UserManagement = () => {
     getCurrentUser();
   }, []);
 
-  const isSuperAdmin = me?.level === "admin";
+  const router = useRouter();
+
+  useEffect(() => {
+    if (me && me.level !== "super" && me.level !== "community" && me.level !== "finance") {
+      router.push("/admin/opulententrepreneurs/open/dashboard");
+    }
+  }, [me]);
+
+  const showTokensAndSubscription = me?.level === "super" || me?.level === "finance";
+  const showStatusAndAction = me?.level === "super" || me?.level === "community";
+  const isSuperAdmin = me?.level === "super";
+
 
   // Fetch all users on mount using fetchUsers API function.
   useEffect(() => {
@@ -80,7 +93,7 @@ const UserManagement = () => {
       alert("Failed to delete user. Please try again.");
     }
   };
-  
+
 
   // Handler for checkbox selection per row.
   const handleCheckboxChange = (userId, checked) => {
@@ -247,10 +260,10 @@ const UserManagement = () => {
                         <th>Name</th>
                         <th>Profile</th>
                         <th>Email</th>
-                        <th>Tokens</th>
-                        <th>Subscription</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                        {showTokensAndSubscription && <th>Tokens</th>}
+                        {showTokensAndSubscription && <th>Subscription</th>}
+                        {showStatusAndAction && <th>Status</th>}
+                        {showStatusAndAction && <th>Action</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -281,67 +294,73 @@ const UserManagement = () => {
                                 />
                               </td>
                               <td>{user.email}</td>
-                              <td>
-                                <div>
-                                  <span>{user.tokens || 0}</span>
-                                  <input
-                                    type="text"
-                                    value={updates.tokenChange || ""}
-                                    onChange={(e) =>
-                                      handleInputChange(user._id, "tokenChange", e.target.value)
-                                    }
-                                    placeholder="e.g. +50 or -20"
-                                    style={{ width: "80px", marginLeft: "10px" }}
-                                    disabled={!isSuperAdmin}
-                                  />
-                                </div>
-                              </td>
-                              <td>
-                                <select
-                                  value={updates.subscription || "none"}
-                                  onChange={(e) =>
-                                    handleInputChange(user._id, "subscription", e.target.value)
-                                  }
-                                  className="form-select"
-                                  disabled={!isSuperAdmin}
-                                >
-                                  <option value="none">None</option>
-                                  <option value="basic">Basic</option>
-                                  <option value="premium">Premium</option>
-                                </select>
-                              </td>
+                              {showTokensAndSubscription && (
+                                <>
+                                  <td>
+                                    <div>
+                                      <span>{user.tokens || 0}</span>
+                                      <input
+                                        type="text"
+                                        value={userUpdates[user._id]?.tokenChange || ""}
+                                        onChange={(e) =>
+                                          handleInputChange(user._id, "tokenChange", e.target.value)
+                                        }
+                                        placeholder="e.g. +50"
+                                        style={{ width: "80px", marginLeft: "10px" }}
+                                        disabled={!isSuperAdmin}
+                                      />
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <select
+                                      value={userUpdates[user._id]?.subscription || "none"}
+                                      onChange={(e) =>
+                                        handleInputChange(user._id, "subscription", e.target.value)
+                                      }
+                                      className="form-select"
+                                      disabled={!isSuperAdmin}
+                                    >
+                                      <option value="none">None</option>
+                                      <option value="basic">Basic</option>
+                                      <option value="premium">Premium</option>
+                                    </select>
+                                  </td>
+                                </>
+                              )}
 
-<td>
-  <select
-    value={updates.status || user.status || "active"}
-    onChange={(e) =>
-      handleInputChange(user._id, "status", e.target.value)
-    }
-    className="form-select"
-    disabled={!isSuperAdmin}
-  >
-    <option value="active">Active</option>
-    <option value="inactive">Inactive</option>
-  </select>
-</td>
-<td>
-  <button
-    className="btn btn-primary btn-sm"
-    onClick={() => handleUpdateUser(user._id)}
-  >
-    Update
-  </button>
-
-  {isSuperAdmin && (
-    <button
-      className="btn btn-danger btn-sm ml-2"
-      onClick={() => handleDeleteUser(user._id)}
-    >
-      Delete
-    </button>
-  )}
-</td>
-
+                              {showStatusAndAction && (
+                                <>
+                                  <td>
+                                    <select
+                                      value={userUpdates[user._id]?.status || user.status || "active"}
+                                      onChange={(e) =>
+                                        handleInputChange(user._id, "status", e.target.value)
+                                      }
+                                      className="form-select"
+                                      disabled={!isSuperAdmin}
+                                    >
+                                      <option value="active">Active</option>
+                                      <option value="inactive">Inactive</option>
+                                    </select>
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="btn btn-primary btn-sm"
+                                      onClick={() => handleUpdateUser(user._id)}
+                                    >
+                                      Update
+                                    </button>
+                                    {isSuperAdmin && (
+                                      <button
+                                        className="btn btn-danger btn-sm ml-2"
+                                        onClick={() => handleDeleteUser(user._id)}
+                                      >
+                                        Delete
+                                      </button>
+                                    )}
+                                  </td>
+                                </>
+                              )}
                             </tr>
                           );
                         })

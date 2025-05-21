@@ -6,12 +6,42 @@ import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Script from "next/script";
 import Resources from "../Admin_Scripts";
-import { fetchAllTools } from "@/app/api";
+import { fetchAllTools, fetchMe } from "@/app/api";
 import '../../styles/admin_assets/bundles/datatables/datatables.min.css';
 import '../../styles/admin_assets/bundles/datatables/DataTables-1.10.16/css/dataTables.bootstrap4.min.css';
+import { useRouter } from "next/navigation";
 
 const Tools = () => {
+  const router = useRouter();
+  const [me, setMe] = useState(null); // <- new state for current user
+  const [loading3, setLoading3] = useState(true); // <- new state for current user
+  const [loading2, setLoading2] = useState(true); // <- new state for current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
   const [tools, setTools] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedTools, setSelectedTools] = useState([]);
 
   // Fetch tool data when the component mounts
@@ -20,6 +50,7 @@ const Tools = () => {
       try {
         const data = await fetchAllTools();
         setTools(data);
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching tools:", error);
       }
@@ -29,13 +60,13 @@ const Tools = () => {
 
   // Initialize DataTables once data is loaded
   useEffect(() => {
-    if (typeof window !== "undefined" && window.$ && window.$.fn && window.$.fn.DataTable) {
+    if (!loading && typeof window !== "undefined" && window.$ && window.$.fn && window.$.fn.DataTable) {
       if (window.$.fn.DataTable.isDataTable('#table-1')) {
         window.$('#table-1').DataTable().destroy();
       }
       window.$('#table-1').DataTable();
     }
-  }, [tools]);
+  }, [tools, loading]);
 
   // Inline style for truncating text
   const truncateStyle = {
@@ -153,6 +184,9 @@ const Tools = () => {
       setSelectedTools([]);
     }
   };
+    if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   return (
     <>

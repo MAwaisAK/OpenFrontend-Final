@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
-import { getChatLobby, fetchMe,createChatLobbyRequest, getUsersInfoChat} from "../../app/api"; // Adjust paths as needed
+import { getChatLobby, fetchMe, createChatLobbyRequest, getUsersInfoChat } from "../../app/api"; // Adjust paths as needed
 import moment from "moment";
 import $ from "jquery";
 import Script from "next/script";
@@ -12,8 +12,8 @@ import "../../styles/admin_assets/css/components.css";
 // Base endpoint (adjust as needed)
 const BASE_ENDPOINT =
   process.env.NEXT_PUBLIC_BASE_ENDPOINT;
-  
-  const SOCKET_ENDPOINT =
+
+const SOCKET_ENDPOINT =
   process.env.NEXT_PUBLIC_BASE_ENDPOINT_SOCKET;
 
 // Date separator component
@@ -41,6 +41,20 @@ const getDateLabel = (timestamp) => {
   return msgDate.format('MMMM D, YYYY');
 };
 
+function getFilenameFromUrl(url) {
+  try {
+    // decodeURI so “%20” → spaces etc.
+    const pathname = new URL(url).pathname;
+    const raw = decodeURIComponent(pathname.split('/').pop());
+    return raw;   // e.g. "1747789783494-…-Sid Meier's Civilization 6 [FitGirl Repack].torrent"
+  } catch {
+    return '';
+  }
+}
+function makeFallbackName() {
+  return `Download-File-${moment().format("YYYYMMDD-HHmmss")}`;
+}
+
 
 export default function ChatAppMerged() {
   // Chat state
@@ -58,7 +72,8 @@ export default function ChatAppMerged() {
   const [unseenCount, setUnseenCount] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const chatContentRef = useRef(null);
-        const [hasMore, setHasMore]   = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [typingUsers, setTypingUsers] = useState(new Set());
 
   // Call-related state
   const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -66,6 +81,12 @@ export default function ChatAppMerged() {
   const [friendsIds, setFriendsIds] = useState([]);        // raw IDs from fetchMe
   const [searchFriends, setSearchFriends] = useState([]);  // friend‐info for display
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState(null);
+  const fileInputRef = useRef(null);
+
+  // ── New for Enlarging Images ──
+  const [enlargedImageUrl, setEnlargedImageUrl] = useState(null);
 
   const audioRef = useRef(null);
 
@@ -77,56 +98,56 @@ export default function ChatAppMerged() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-const filteredUsers = users.filter((usr) => {
-  // Check if participants[1] exists
-  const participant = usr.participants[1];
-  if (!participant) return false; // Return false if participant[1] is undefined
+  const filteredUsers = users.filter((usr) => {
+    // Check if participants[1] exists
+    const participant = usr.participants[1];
+    if (!participant) return false; // Return false if participant[1] is undefined
 
-  const firstName = participant.firstName || "";
-  const lastName = participant.lastName || "";
-  const fullName = (firstName + " " + lastName).toLowerCase();
-  return fullName.includes(searchTerm.toLowerCase());
-});
+    const firstName = participant.firstName || "";
+    const lastName = participant.lastName || "";
+    const fullName = (firstName + " " + lastName).toLowerCase();
+    return fullName.includes(searchTerm.toLowerCase());
+  });
 
-useEffect(() => {
-  // If there’s a non‐empty search term AND no lobby matches, fetch friends
-  if (searchTerm && filteredUsers.length === 0 && friendsIds.length) {
-    getUsersInfoChat(friendsIds).then((allFriends) => {
-      const lower = searchTerm.toLowerCase();
-      setSearchFriends(
-        allFriends
-          .filter(u =>
-            `${u.firstName} ${u.lastName}`.toLowerCase().includes(lower)
-          )
-          .sort((a, b) =>
-            a.firstName.localeCompare(b.firstName) ||
-            a.lastName.localeCompare(b.lastName)
-          )
-      );
-    });
-    return;
-  }
+  useEffect(() => {
+    // If there’s a non‐empty search term AND no lobby matches, fetch friends
+    if (searchTerm && filteredUsers.length === 0 && friendsIds.length) {
+      getUsersInfoChat(friendsIds).then((allFriends) => {
+        const lower = searchTerm.toLowerCase();
+        setSearchFriends(
+          allFriends
+            .filter(u =>
+              `${u.firstName} ${u.lastName}`.toLowerCase().includes(lower)
+            )
+            .sort((a, b) =>
+              a.firstName.localeCompare(b.firstName) ||
+              a.lastName.localeCompare(b.lastName)
+            )
+        );
+      });
+      return;
+    }
 
-  // Otherwise, if we previously had searchFriends, clear them exactly once
-  if (searchFriends.length > 0) {
-    setSearchFriends([]);
-  }
-}, [searchTerm, filteredUsers, friendsIds, searchFriends]);
+    // Otherwise, if we previously had searchFriends, clear them exactly once
+    if (searchFriends.length > 0) {
+      setSearchFriends([]);
+    }
+  }, [searchTerm, filteredUsers, friendsIds, searchFriends]);
 
 
 
-const handleFriendClick = async (friend) => {
-  if (!authUser) {
-    console.error("User not authenticated");
-    return;
-  }
-  try {
-    const { chatLobbyId } = await createChatLobbyRequest(authUser._id, friend._id);
-    window.location.href = `/profile/chat`;
-  } catch (error) {
-    console.error("Error starting chat", error);
-  }
-};
+  const handleFriendClick = async (friend) => {
+    if (!authUser) {
+      console.error("User not authenticated");
+      return;
+    }
+    try {
+      const { chatLobbyId } = await createChatLobbyRequest(authUser._id, friend._id);
+      window.location.href = `/profile/chat`;
+    } catch (error) {
+      console.error("Error starting chat", error);
+    }
+  };
 
 
 
@@ -140,13 +161,13 @@ const handleFriendClick = async (friend) => {
     }
     // Shift+Enter will naturally create a new line in a textarea
   };
-  
+
   const deleteChatForUser = async (chatLobbyId, currentUserId) => {
     try {
       const response = await axios.post(
         `${BASE_ENDPOINT}/auth/delete-chat-for-user`,
-        { 
-          chatLobbyId, 
+        {
+          chatLobbyId,
           userId: currentUserId // Pass the current user id explicitly
         },
         {
@@ -161,21 +182,21 @@ const handleFriendClick = async (friend) => {
       throw error;
     }
   };
-  
+
 
   const handleDeleteChat = async (chatLobbyId, currentUserId) => {
     try {
       const data = await deleteChatForUser(chatLobbyId, currentUserId);
       setCredentials((prev) => ({ ...prev, room: null }));
-  
+
       // Refresh page after successful deletion
       window.location.reload();
     } catch (error) {
       console.error("Failed to delete chat lobby for user", error);
     }
   };
-  
-  
+
+
 
   // Format seconds to mm:ss
   const formatTime = (seconds) => {
@@ -199,9 +220,9 @@ const handleFriendClick = async (friend) => {
     return "";
   };
 
-  const deleteMessageSocket = (messageId, deleteType,chatLobbyId,userId,time) => {
+  const deleteMessageSocket = (messageId, deleteType, chatLobbyId, userId, time) => {
     if (socket) {
-      socket.emit("deleteMessage", { messageId, deleteType,chatLobbyId,userId,time }, (err) => {
+      socket.emit("deleteMessage", { messageId, deleteType, chatLobbyId, userId, time }, (err) => {
         if (!err) {
           // Remove message from state immediately after deletion
           setChats((prevChats) => prevChats.filter(msg => msg.id !== messageId));
@@ -246,17 +267,24 @@ const handleFriendClick = async (friend) => {
     };
     getUsers();
   }, []);
-  
 
-  const downloadFile = async (url, fileName) => {
+
+
+  const downloadFile = async (url, providedName) => {
     try {
-      const finalUrl = url.includes("firebasestorage.googleapis.com")
+      // pick providedName if it already has an extension, otherwise extract real:
+      const realName = getFilenameFromUrl(url);
+      const fileName = providedName && /\.[a-z0-9]+$/i.test(providedName)
+        ? providedName
+        : (realName || makeFallbackName());
+
+      const finalUrl = url.includes("storage.googleapis.com")
         ? `${BASE_ENDPOINT}/proxy-download?fileUrl=${encodeURIComponent(url)}`
         : url;
+
       const response = await fetch(finalUrl);
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -271,9 +299,9 @@ const handleFriendClick = async (friend) => {
     }
   };
 
-    const [page, setPage] = useState(0);
+  const [page, setPage] = useState(0);
   // Fetch chat history when a chat lobby is set.
-useEffect(() => {
+  useEffect(() => {
     if (!credentials.room) return;
     const fetchMessages = async () => {
       const el = chatContentRef.current;
@@ -282,7 +310,7 @@ useEffect(() => {
 
       setIsLoading(true);
       try {
-       const { data } = await axios.get(
+        const { data } = await axios.get(
           `${BASE_ENDPOINT}/auth/chat-messages/${credentials.room}?userId=${credentials.userId}&page=${page}`,
           { headers: { Authorization: `Bearer ${localStorage.getItem("access-token")}` } }
         );
@@ -299,7 +327,7 @@ useEffect(() => {
           isImage: msg.isImage,
           isVideo: msg.isVideo || (msg.fileUrl && /\.(mp4|webm|ogg)$/i.test(msg.fileUrl)),
         }));
-setHasMore(data.hasMore);
+        setHasMore(data.hasMore);
         if (page === 0) {
           setChats(msgs);
         } else {
@@ -321,15 +349,15 @@ setHasMore(data.hasMore);
   }, [credentials.room, credentials.userId, page]);
 
   // Infinite scroll: load older messages when scrolled to top
- useEffect(() => {
+  useEffect(() => {
     const el = chatContentRef.current;
     if (!el) return;
 
     const onScroll = () => {
       // if we're within 20px of the top, and not already loading, fetch more
-          if (el.scrollTop <= 20 && !isLoading && hasMore) {
-       setPage(p => p + 1);
-     }
+      if (el.scrollTop <= 20 && !isLoading && hasMore) {
+        setPage(p => p + 1);
+      }
     };
 
     el.addEventListener('scroll', onScroll);
@@ -417,10 +445,19 @@ setHasMore(data.hasMore);
         }
       });
 
-      
+
 
       socketConnection.on("messageDeleted", (data) => {
-        setChats((prevChats) => prevChats.filter(msg => msg.id !== data.messageId));
+        setChats(prevChats =>
+          prevChats.filter(chat => {
+            if (data.messageId) {
+              return chat.id !== data.messageId;
+            } else if (data.timestamp) {
+              return chat.timestamp !== data.timestamp;
+            }
+            return true;
+          })
+        );
       });
 
       socketConnection.on('lobbyUpdated', ({ chatLobbyId, lastmsg, lastUpdated }) => {
@@ -440,7 +477,7 @@ setHasMore(data.hasMore);
           if (prev.length === 0) return prev;
           const next = [...prev];
           const last = next[next.length - 1];
-      
+
           // only flip seen on your own outgoing last message
           if (last.from === credentials.name) {
             last.seen = seen;
@@ -448,8 +485,8 @@ setHasMore(data.hasMore);
           return next;
         });
       });
-      
-      
+
+
 
 
       return () => {
@@ -458,45 +495,107 @@ setHasMore(data.hasMore);
     }
   }, [authUser, credentials.room, selectedUser]);
 
+  // Called when the hidden <input type="file" /> changes
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSelectedFile(file);
+    setFilePreviewUrl(URL.createObjectURL(file));
+  };
+
+  // Called when user confirms “Send” in the preview box
+  const handleSendFile = () => {
+    if (!selectedFile) return;
+    // reuse your existing uploadFile logic, but pass in selectedFile
+    const fakeFileInput = { files: [selectedFile] };
+    uploadFile({ files: fakeFileInput.files }, false);
+    // cleanup
+    setSelectedFile(null);
+    setFilePreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   // whenever chats change, auto-emit messageSeen for any incoming messages you haven’t seen yet
-useEffect(() => {
-  if (!socket || !credentials.room) return;
-  chats.forEach((msg) => {
-    if (msg.from !== credentials.name && !msg.seen) {
-      socket.emit("messageSeen", {
-        messageId: msg.id,
-        room: credentials.room,
-        readerId: authUser._id
+  useEffect(() => {
+    if (!socket || !credentials.room) return;
+    chats.forEach((msg) => {
+      if (msg.from !== credentials.name && !msg.seen) {
+        socket.emit("messageSeen", {
+          messageId: msg.id,
+          room: credentials.room,
+          readerId: authUser._id
+        });
+      }
+    });
+  }, [chats, socket, credentials.room, authUser]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("userTyping", ({ userId }) => {
+      setTypingUsers(prev => new Set(prev).add(userId));
+    });
+
+    socket.on("userStoppedTyping", ({ userId }) => {
+      setTypingUsers(prev => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
       });
-    }
-  });
-}, [chats, socket, credentials.room, authUser]);
+    });
+
+    return () => {
+      socket.off("userTyping");
+      socket.off("userStoppedTyping");
+    };
+  }, [socket]);
+
+  let typingTimeout = useRef(null);
+
+  const notifyTyping = () => {
+    if (!socket) return;
+    socket.emit("typing", {
+      room: credentials.room,
+      userId: credentials.userId,
+      username: credentials.name,
+    });
+
+    // debounce stopTyping 1.5s after last keystroke
+    clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => {
+      socket.emit("stopTyping", {
+        room: credentials.room,
+        userId: credentials.userId,
+      });
+    }, 1500);
+  };
+
 
 
   // When a user is clicked in the sidebar, create or fetch a chat lobby.
-const handleUserClick = async (recipient) => {
-  // 1. If it’s the same lobby, ignore
-  if (credentials.room === recipient.chatLobbyId) return;
+  const handleUserClick = async (recipient) => {
+    // 1. If it’s the same lobby, ignore
+    if (credentials.room === recipient.chatLobbyId) return;
 
-  // 2. Now clear out any old messages & reset page/loading
-  setChats([]);
-  setPage(0);
-  setIsLoading(true);
+    // 2. Now clear out any old messages & reset page/loading
+    setChats([]);
+    setPage(0);
+    setIsLoading(true);
 
-  // 3. Switch the room and fetch
-  setSelectedUser(recipient);
-  try {
-    const res = await axios.post(
-      `${BASE_ENDPOINT}/auth/chat-lobby`,
-      { userId1: authUser._id, userId2: recipient.participants[1] }
-    );
-    setCredentials((prev) => ({ ...prev, room: res.data.chatLobbyId }));
-    // your fetch‐messages effect will fire automatically and clear isLoading when done
-  } catch (err) {
-    console.error("Error creating/fetching chat lobby", err);
-    setIsLoading(false);
-  }
-};
+    // 3. Switch the room and fetch
+    setSelectedUser(recipient);
+    try {
+      const res = await axios.post(
+        `${BASE_ENDPOINT}/auth/chat-lobby`,
+        { userId1: authUser._id, userId2: recipient.participants[1] }
+      );
+      setCredentials((prev) => ({ ...prev, room: res.data.chatLobbyId }));
+      // your fetch‐messages effect will fire automatically and clear isLoading when done
+    } catch (err) {
+      console.error("Error creating/fetching chat lobby", err);
+      setIsLoading(false);
+    }
+  };
 
 
   // Send text messages.
@@ -508,9 +607,6 @@ const handleUserClick = async (recipient) => {
         { text: input, sender: authUser._id, room: credentials.room },
         () => {
           setInput("");
-           if (chatContentRef.current) {
-          chatContentRef.current.scrollTop = chatContentRef.current.scrollHeight;
-        }
         }
       );
     }
@@ -518,11 +614,11 @@ const handleUserClick = async (recipient) => {
   const hasLobbies = filteredUsers.length > 0;
 
   const sortedLobbies = hasLobbies
-  ? [...filteredUsers].sort(
+    ? [...filteredUsers].sort(
       (a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated)
     )
-  : [];
-const displayList = hasLobbies ? sortedLobbies : searchFriends;
+    : [];
+  const displayList = hasLobbies ? sortedLobbies : searchFriends;
 
   // File upload via jQuery AJAX.
   const uploadFile = (fileEl, isPrivate) => {
@@ -581,7 +677,7 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
     if (authUser) {
       $("#input-file").on("change", function () {
         const fileEl = document.getElementById("input-file");
-        uploadFile(fileEl, false);
+        handleFileChange({ target: fileEl });
       });
       $("#private-send-file").on("change", function () {
         const fileEl = document.getElementById("private-send-file");
@@ -606,10 +702,10 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
     const canDelete =
       chat.from === credentials.name &&
       new Date() - new Date(chat.timestamp) < 7 * 60 * 1000;
-  
+
     // Show the "Seen" indicator only for the last message sent by the current user.
     const showSeen = isLast && chat.from === credentials.name;
-  
+
     // Define a common responsive style for images and iframes.
     const commonResponsiveStyle = {
       maxWidth: "200px",
@@ -629,14 +725,13 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
       height: "auto",
       display: "block"
     };
-    
+
     if (chat.type === "text") {
       return (
         <div
           key={index}
-          className={`chat-item chat-${
-            chat.from === credentials.name ? "right" : "left"
-          }`}
+          className={`chat-item chat-${chat.from === credentials.name ? "right" : "left"
+            }`}
           style={{
             display: "flex",
             alignItems: "flex-start",
@@ -666,7 +761,7 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
             >
               {chat.time}
             </div>
-          
+
             {showSeen && (
               <div style={{ fontSize: "0.7em", color: "#999" }}>
                 {chat.seen ? "Seen" : ""}
@@ -684,7 +779,7 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
                 <i
                   className="mdi mdi-delete"
                   style={{ cursor: "pointer", fontSize: "1.2em" }}
-                  onClick={() => deleteMessageSocket(chat.id, "forEveryone",credentials.room,credentials.userId,chat.timestamp)}
+                  onClick={() => deleteMessageSocket(chat.id, "forEveryone", credentials.room, credentials.userId, chat.timestamp)}
                   title="Delete for Everyone"
                 ></i>
               </div>
@@ -700,9 +795,8 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
       return (
         <div
           key={index}
-          className={`chat-item chat-${
-            chat.from === credentials.name ? "right" : "left"
-          }`}
+          className={`chat-item chat-${chat.from === credentials.name ? "right" : "left"
+            }`}
           style={{
             display: "flex",
             alignItems: "flex-start",
@@ -717,10 +811,16 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
               style={{ position: "relative", display: "inline-block" }}
             >
               {chat.isImage ? (
-                <img src={fileUrl} alt="uploaded" style={commonimgResponsiveStyle} />
+                <div className="relative group inline-block">
+                  <img
+                    src={fileUrl}
+                    alt="uploaded"
+                    style={commonimgResponsiveStyle}
+                  />
+                </div>
               ) : chat.isVideo ? (
                 <video controls style={commonvideoResponsiveStyle}>
-                  <source src={fileUrl} type="video/mp4"/>
+                  <source src={fileUrl} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               ) : (
@@ -732,6 +832,10 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
                   }}
                 >
                   <i className="mdi mdi-file" style={{ fontSize: "2em" }}></i>
+                  {/* ↓ new file name below icon ↓ */}
+                  <div style={{ fontSize: "0.8em", marginTop: "4px", wordBreak: "break-all" }}>
+                    {fileUrl.split("/").pop()}
+                  </div>
                 </div>
               )}
             </div>
@@ -741,7 +845,7 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
             >
               {chat.time}
             </div>
-         
+
             {showSeen && (
               <div style={{ fontSize: "0.7em", color: "#999" }}>
                 {chat.seen ? "Seen" : ""}
@@ -767,7 +871,7 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
                   <i
                     className="mdi mdi-delete"
                     style={{ cursor: "pointer", fontSize: "1.2em" }}
-                    onClick={() => deleteMessageSocket(chat.id, "forEveryone",credentials.room,credentials.userId,chat.timestamp)}
+                    onClick={() => deleteMessageSocket(chat.id, "forEveryone", credentials.room, credentials.userId, chat.timestamp)}
                     title="Delete for Everyone"
                   ></i>
                 </div>
@@ -782,19 +886,26 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
               >
                 <i
                   className="mdi mdi-download"
-                  style={{ cursor: "pointer", fontSize: "1.2em" }}
+                  style={{
+                    display: "flex",
+                    padding: "2px",
+                    borderRadius: "4px",
+                    marginRight: "10px", cursor: "pointer", fontSize: "1.2em"
+                  }}
                   onClick={() =>
                     downloadFile(
                       fileUrl,
                       chat.isImage
                         ? `Download-Image-${moment().format("YYYYMMDD-HHmmss")}.png`
                         : chat.isVideo
-                        ? `Download-Video-${moment().format("YYYYMMDD-HHmmss")}.mp4`
-                        : `Download-File-${moment().format("YYYYMMDD-HHmmss")}`
+                          ? `Download-Video-${moment().format("YYYYMMDD-HHmmss")}.mp4`
+                          : `Download-File-${moment().format("YYYYMMDD-HHmmss")}`
                     )
                   }
                   title="Download File"
                 ></i>
+
+                <i className="mdi mdi-arrow-expand" style={{ cursor: "pointer", fontSize: "1.2em" }} onClick={() => setEnlargedImageUrl(fileUrl)} />
               </div>
             </div>
           </div>
@@ -803,349 +914,472 @@ const displayList = hasLobbies ? sortedLobbies : searchFriends;
     }
     return null;
   };
-  
+
   return (
     <>
       <div id="app">
-  <div className="main-wrapper main-wrapper-1">
-    <div className="navbar-bg"></div>
-    <div className="main-content">
-      <section className="section">
-        <div className="section-body">
-          <div className="row">
-            {/* Left Sidebar: People List */}
-            {(!isMobile || (isMobile && !selectedUser)) && (
-  <div className="col-lg-3">
-    <div className="card">
-      <div className="body">
-        <div id="plist" className="people-list">
-          <div className="chat-search">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div
-            className="m-b-20"
-            style={{
-              overflowY: "auto",
-              maxHeight: "calc(100vh - 150px)",
-            }}
-          >
-             {displayList.length > 0 && (
-            <ul className="chat-list list-unstyled m-b-0">
-              {displayList.map((item, idx) => {
-                if (hasLobbies) {
-                  // existing chat lobby entry
-                  const usr = item;
-                  const count = unseenCount[usr._id] || 0;
-                  const isActive = usr.chatLobbyId === credentials.room;
-                  const otherUser =
-                    usr.participants[0]._id === credentials.userId
-                      ? usr.participants[1]
-                      : usr.participants[0];
-                  const firstName = otherUser.firstName || "N/A";
-                  const lastName = otherUser.lastName || "N/A";
-                  const profilepic =
-                    otherUser.profile_pic ||
-                    "/assets/admin_assets/img/users/user.png";
-                  return (
-                    <li
-                      key={usr.chatLobbyId}
-                       className={`clearfix ${isActive ? 'active-lobby' : ''}`}
-                      onClick={isActive ? undefined : () => handleUserClick(usr)}
-                      style={{
-              cursor: isActive ? 'default' : 'pointer',
-              backgroundColor: isActive ? '#e6f7ff' : 'transparent',
-              borderLeft: isActive ? '4px solid #1890ff' : 'none',
-              paddingLeft: isActive ? '8px' : '12px',
-              opacity: 1,
-            }}
-                    >
-                      <img
-                        src={profilepic}
-                        alt="avatar"
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "50%",
-                        }}
-                      />
-                      <div className="about">
-                        <div className="name">
-                          {firstName} {lastName}
-                          {count > 0 && (
-                            <span
+        <div className="main-wrapper main-wrapper-1">
+          <div className="navbar-bg"></div>
+          <div className="main-content">
+            <section className="section">
+              <div className="section-body">
+                <div className="row">
+                  {/* Left Sidebar: People List */}
+                  {(!isMobile || (isMobile && !selectedUser)) && (
+                    <div className="col-lg-3">
+                      <div className="card">
+                        <div className="body">
+                          <div id="plist" className="people-list">
+                            <div className="chat-search">
+                              <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Search..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                              />
+                            </div>
+                            <div
+                              className="m-b-20"
                               style={{
-                                backgroundColor: "red",
-                                color: "white",
-                                borderRadius: "50%",
-                                padding: "2px 6px",
-                                fontSize: "0.7em",
-                                marginLeft: "5px",
+                                overflowY: "auto",
+                                maxHeight: "calc(100vh - 150px)",
                               }}
                             >
-                              {count}
-                            </span>
-                          )}
+                              {displayList.length > 0 && (
+                                <ul className="chat-list list-unstyled m-b-0">
+                                  {displayList.map((item, idx) => {
+                                    if (hasLobbies) {
+                                      // existing chat lobby entry
+                                      const usr = item;
+                                      const count = unseenCount[usr._id] || 0;
+                                      const isActive = usr.chatLobbyId === credentials.room;
+                                      const otherUser =
+                                        usr.participants[0]._id === credentials.userId
+                                          ? usr.participants[1]
+                                          : usr.participants[0];
+                                      const firstName = otherUser.firstName || "N/A";
+                                      const lastName = otherUser.lastName || "N/A";
+                                      const profilepic =
+                                        otherUser.profile_pic ||
+                                        "/assets/admin_assets/img/users/user.png";
+                                      return (
+                                        <li
+                                          key={usr.chatLobbyId}
+                                          className={`clearfix ${isActive ? 'active-lobby' : ''}`}
+                                          onClick={isActive ? undefined : () => handleUserClick(usr)}
+                                          style={{
+                                            cursor: isActive ? 'default' : 'pointer',
+                                            backgroundColor: isActive ? '#e6f7ff' : 'transparent',
+                                            borderLeft: isActive ? '4px solid #1890ff' : 'none',
+                                            paddingLeft: isActive ? '8px' : '12px',
+                                            opacity: 1,
+                                          }}
+                                        >
+                                          <img
+                                            src={profilepic}
+                                            alt="avatar"
+                                            style={{
+                                              width: "40px",
+                                              height: "40px",
+                                              borderRadius: "50%",
+                                            }}
+                                          />
+                                          <div className="about">
+                                            <div className="name">
+                                              {firstName} {lastName}
+                                              {count > 0 && (
+                                                <span
+                                                  style={{
+                                                    backgroundColor: "red",
+                                                    color: "white",
+                                                    borderRadius: "50%",
+                                                    padding: "2px 6px",
+                                                    fontSize: "0.7em",
+                                                    marginLeft: "5px",
+                                                  }}
+                                                >
+                                                  {count}
+                                                </span>
+                                              )}
+                                            </div>
+                                            {usr.lastmsg && (
+                                              <div
+                                                style={{
+                                                  fontSize: "0.8em",
+                                                  color: "gray",
+                                                  marginTop: "2px",
+                                                  whiteSpace: "nowrap",
+                                                  overflow: "hidden",
+                                                  textOverflow: "ellipsis",
+                                                  maxWidth: "150px",
+                                                }}
+                                                dangerouslySetInnerHTML={{ __html: usr.lastmsg }}
+                                              />
+                                            )}
+                                          </div>
+                                        </li>
+                                      );
+                                    } else {
+                                      // fallback to friends list
+                                      const friend = item;
+                                      return (
+                                        <li
+                                          key={friend._id}
+                                          className="clearfix"
+                                          onClick={() => handleFriendClick(friend)}
+                                          style={{ cursor: "pointer" }}
+                                        >
+                                          <img
+                                            src={friend.profile_pic || "/assets/admin_assets/img/users/user.png"}
+                                            alt="avatar"
+                                            style={{
+                                              width: "40px",
+                                              height: "40px",
+                                              borderRadius: "50%",
+                                            }}
+                                          />
+                                          <div className="about">
+                                            <div className="name">
+                                              {friend.firstName} {friend.lastName}
+                                            </div>
+                                          </div>
+                                        </li>
+                                      );
+                                    }
+                                  })}
+                                </ul>)}
+                            </div>
+                          </div>
                         </div>
-                        {usr.lastmsg && (
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Chat Box (Right Side) */}
+                  {(isMobile && selectedUser) || (!isMobile && (selectedUser || credentials.room)) ? (
+                    <div className={isMobile ? "col-12" : "col-xs-12 col-sm-12 col-md-9 col-lg-9"}>
+                      <div className="card">
+                        {selectedFile && (
+
                           <div
+                            className="file-preview-box"
                             style={{
-                              fontSize: "0.8em",
-                              color: "gray",
-                              marginTop: "2px",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              maxWidth: "150px",
+                              position: "absolute",
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                              maxWidth: "90%",
+                              maxHeight: "90%",
+                              overflow: "auto",
+                              background: "#fff",
+                              padding: "1rem",
+                              borderRadius: "8px",
+                              boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                              zIndex: 20,
                             }}
                           >
-                            {usr.lastmsg}
+                            {selectedFile.type.startsWith("image/") && (
+                              <img
+                                src={filePreviewUrl}
+                                style={{ maxWidth: "100%", maxHeight: "60vh", objectFit: "contain", display: "block", margin: "0 auto" }}
+                              />
+                            )}
+                            {selectedFile.type.startsWith("video/") && (
+                              <video
+                                controls
+                                src={filePreviewUrl}
+                                style={{ maxWidth: "100%", maxHeight: "60vh", display: "block", margin: "0 auto" }}
+                              />
+                            )}
+                            {!selectedFile.type.startsWith("image/") &&
+                              !selectedFile.type.startsWith("video/") && (
+                                <div style={{ textAlign: "center" }}>{selectedFile.name}</div>
+                              )}
+                            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem", gap: "0.5rem" }}>
+                              <button onClick={handleSendFile} className="btn btn-sm btn-primary">
+                                Send
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedFile(null);
+                                  setFilePreviewUrl(null);
+                                  if (fileInputRef.current) fileInputRef.current.value = "";
+                                }}
+                                className="btn btn-sm btn-secondary"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
                         )}
-                      </div>
-                    </li>
-                  );
-                } else {
-                  // fallback to friends list
-                  const friend = item;
-                  return (
-                    <li
-                      key={friend._id}
-                      className="clearfix"
-                      onClick={() => handleFriendClick(friend)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <img
-                        src={friend.profile_pic || "/assets/admin_assets/img/users/user.png"}
-                        alt="avatar"
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "50%",
-                        }}
-                      />
-                      <div className="about">
-                        <div className="name">
-                          {friend.firstName} {friend.lastName}
+                        <div className="chat">
+                          {/* Chat Header */}
+                          <div
+                            className="chat-header clearfix"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            {/* Left: User Info */}
+                            <div style={{ display: "flex", alignItems: "center" }}>
+                              {isMobile && selectedUser && (
+                                <i
+                                  className="mdi mdi-arrow-left"
+                                  style={{
+                                    cursor: "pointer",
+                                    marginRight: "10px",
+                                    fontSize: "24px",
+                                  }}
+                                  onClick={() => setSelectedUser(null)}
+                                  title="Back"
+                                ></i>
+                              )}
+                              {selectedUser && (() => {
+                                // Determine the other user based on credentials.userId
+                                const otherUser =
+                                  selectedUser.participants[0]._id === credentials.userId
+                                    ? selectedUser.participants[1]
+                                    : selectedUser.participants[0];
+                                return (
+                                  <a
+                                    href={`/profile/tribers/${otherUser._id}`}
+                                    className="chat-about"
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      textDecoration: "none",
+                                      color: "inherit",
+                                      marginLeft: "10px",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    <img
+                                      src={otherUser.profile_pic || "/assets/admin_assets/img/users/user.png"}
+                                      alt="avatar"
+                                      style={{ width: "40px", height: "40px", borderRadius: "50%" }}
+                                    />
+                                    <div style={{ marginLeft: "8px" }}>
+                                      {otherUser.firstName} {otherUser.lastName}
+                                    </div>
+                                  </a>
+                                );
+                              })()}
+
+                              {!selectedUser && !credentials.room && (
+                                <div className="chat-about" style={{ marginLeft: "10px" }}>
+                                  <div className="chat-with">Select a user to start a chat</div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", marginLeft: "auto" }}>
+
+                              <div className="dropdown">
+                                <i
+                                  className="mdi mdi-dots-vertical"
+                                  style={{ fontSize: "24px", cursor: "pointer" }}
+                                  data-bs-toggle="dropdown"
+                                  aria-expanded="false"
+                                ></i>
+                                <ul className="dropdown-menu dropdown-menu-end">
+                                  <li>
+                                    <a
+                                      className="dropdown-item"
+                                      href="#"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        handleDeleteChat(credentials.room, credentials.userId);
+                                      }}
+                                    >
+                                      Delete Chat
+                                    </a>
+                                  </li>
+                                  <li>
+                                    <a className="dropdown-item" href="/profile/support">Report</a>
+                                  </li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Chat Box */}
+                          <div
+                            className="chat-box"
+                            id="mychatbox"
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              maxHeight: "calc(100vh - 150px)",
+                            }}
+                          >
+                            <div
+                              className="card-body chat-content"
+                              ref={chatContentRef}
+                              style={{
+                                position: "relative",
+                                flex: 1,
+                                overflowY: "auto",
+                                overflowX: "hidden",
+                                wordBreak: "break-word", // Ensures long messages wrap properly
+                              }}
+                            >
+                              {!hasMore && page > 0 && (
+                                <div
+                                  style={{
+                                    textAlign: "center",
+                                    padding: "10px",
+                                    color: "#999",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  — No more messages —
+                                </div>
+                              )}
+                              {isLoading && page > 0 && (
+                                <div style={{ textAlign: 'center', padding: '10px' }}>Loading more...</div>
+                              )}
+                              {chats.map((chat, idx) => {
+                                const label = getDateLabel(chat.timestamp);
+                                const prevLabel = idx > 0 ? getDateLabel(chats[idx - 1].timestamp) : null;
+                                return (
+                                  <React.Fragment key={chat.id || idx}>
+                                    {(idx === 0 || label !== prevLabel) && <DateSeparator label={label} />}
+                                    {renderMessage(chat, idx, idx === chats.length - 1)}
+                                  </React.Fragment>
+                                );
+                              })}
+                              {selectedUser && typingUsers.has(selectedUser.participants.find(p => p._id !== credentials.userId)._id) && (
+                                <div className="chat-item chat-left" style={{ marginBottom: '10px' }}>
+                                  <div className="chat-details">
+                                    <div className="message-container">
+                                      <div
+                                        className="chat-text"
+                                        style={{
+                                          padding: "8px 12px",
+                                          borderRadius: "16px",
+                                          fontStyle: "italic",
+                                          opacity: 0.6
+                                        }}
+                                      >
+                                        …
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Chat Input Form */}
+                            {/* Chat Input Form (conditionally rendered) */}
+                            {!selectedUser?.blockedBy?.includes(authUser._id) && !authUser.blockedTribes?.includes(selectedUser._id) && (
+                              <div className="card-footer chat-form">
+                                <form
+                                  id="chat-form"
+                                  onSubmit={handleMessageSubmit}
+                                  style={{ display: "flex", alignItems: "center" }}
+                                >
+                                  <textarea
+                                    className="form-control"
+                                    placeholder="Type a message"
+                                    value={input}
+                                    onChange={e => {
+                                      setInput(e.target.value);
+                                      notifyTyping();
+                                    }}
+                                    onBlur={() => {
+                                      // immediately clear on blur
+                                      socket.emit("stopTyping", {
+                                        room: credentials.room,
+                                        userId: credentials.userId,
+                                      });
+                                    }}
+                                    onKeyDown={handleKeyDown}
+                                    style={{
+                                      resize: "none",
+                                      overflow: "hidden",
+                                      height: "50px",
+                                      flex: 1, // Allows input to take full width
+                                    }}
+                                  ></textarea>
+                                  <button
+                                    className="btn btn-primary btn-send"
+                                    type="submit"
+                                    style={{ marginLeft: "5px" }}
+                                  >
+                                    <i className="far fa-paper-plane"></i>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary btn-file"
+                                    onClick={() => document.getElementById("input-file").click()}
+                                    style={{ marginLeft: "5px" }}
+                                  >
+                                    <i className="mdi mdi-paperclip"></i>
+                                  </button>
+                                  <input
+                                    type="file"
+                                    id="input-file"
+                                    ref={fileInputRef}
+                                    style={{ display: "none" }}
+                                    accept="*/*"
+                                  />
+
+                                </form>
+                              </div>
+                            )}
+
+                          </div>
                         </div>
                       </div>
-                    </li>
-                  );
-                }
-              })}
-            </ul>)}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+                      {enlargedImageUrl && (
+                        <div
+                          className="image-lightbox-overlay"
+                          onClick={() => setEnlargedImageUrl(null)}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            backgroundColor: "rgba(0, 0, 0, 0.2)",  // ← semi-transparent black
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 999,
+                            cursor: "zoom-out",
+                          }}
+                        >
+                          <img
+                            src={enlargedImageUrl}
+                            alt="Enlarged"
+                            style={{
+                              maxWidth: "90%",
+                              maxHeight: "90%",
+                              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+                            }}
+                          />
+                        </div>
+                      )}
 
-{/* Chat Box (Right Side) */}
-{(isMobile && selectedUser) || (!isMobile && (selectedUser || credentials.room)) ? (
-  <div className={isMobile ? "col-12" : "col-xs-12 col-sm-12 col-md-9 col-lg-9"}>
-    <div className="card">
-      <div className="chat">
-        {/* Chat Header */}
-        <div
-          className="chat-header clearfix"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          {/* Left: User Info */}
-          <div style={{ display: "flex", alignItems: "center" }}>
-            {isMobile && selectedUser && (
-              <i
-                className="mdi mdi-arrow-left"
-                style={{
-                  cursor: "pointer",
-                  marginRight: "10px",
-                  fontSize: "24px",
-                }}
-                onClick={() => setSelectedUser(null)}
-                title="Back"
-              ></i>
-            )}
-           {selectedUser && (() => {
-  // Determine the other user based on credentials.userId
-  const otherUser =
-    selectedUser.participants[0]._id === credentials.userId
-      ? selectedUser.participants[1]
-      : selectedUser.participants[0];
-  return (
-    <a
-      href={`/profile/tribers/${otherUser._id}`}
-      className="chat-about"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        textDecoration: "none",
-        color: "inherit",
-        marginLeft: "10px",
-        cursor: "pointer",
-      }}
-    >
-      <img
-        src={otherUser.profile_pic || "/assets/admin_assets/img/users/user.png"}
-        alt="avatar"
-        style={{ width: "40px", height: "40px", borderRadius: "50%" }}
-      />
-      <div style={{ marginLeft: "8px" }}>
-        {otherUser.firstName} {otherUser.lastName}
-      </div>
-    </a>
-  );
-})()}
+                    </div>
+                  ) : null}
 
-            {!selectedUser && !credentials.room && (
-              <div className="chat-about" style={{ marginLeft: "10px" }}>
-                <div className="chat-with">Select a user to start a chat</div>
+
+
+                  {/* End Chat Box */}
+                  {/* ── Image Lightbox ── */}
+
+
+                </div>
               </div>
-            )}
+            </section>
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", marginLeft: "auto" }}>
-             
-            <div className="dropdown">
-              <i
-                className="mdi mdi-dots-vertical"
-                style={{ fontSize: "24px", cursor: "pointer" }}
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              ></i>
-              <ul className="dropdown-menu dropdown-menu-end">
-              <li>
-      <a
-        className="dropdown-item"
-        href="#"
-        onClick={(e) => {
-          e.preventDefault();
-          handleDeleteChat(credentials.room, credentials.userId);
-        }}
-      >
-        Delete Chat
-      </a>
-    </li>
-                <li>
-                  <a className="dropdown-item" href="/profile/support">Report</a>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Chat Box */}
-        <div
-          className="chat-box"
-          id="mychatbox"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            maxHeight: "calc(100vh - 150px)",
-          }}
-        >
-          <div
-            className="card-body chat-content"
-            ref={chatContentRef}
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              overflowX: "hidden",
-              wordBreak: "break-word", // Ensures long messages wrap properly
-            }}
-          >
-              {!hasMore && page > 0 && (
-    <div
-      style={{
-        textAlign: "center",
-        padding: "10px",
-        color: "#999",
-        fontStyle: "italic",
-      }}
-    >
-      — No more messages —
-    </div>
-  )}
-            {isLoading && page > 0 && (
-          <div style={{ textAlign: 'center', padding: '10px' }}>Loading more...</div>
-        )}
-        {chats.map((chat, idx) => {
-          const label = getDateLabel(chat.timestamp);
-          const prevLabel = idx > 0 ? getDateLabel(chats[idx - 1].timestamp) : null;
-          return (
-            <React.Fragment key={chat.id || idx}>
-              {(idx === 0 || label !== prevLabel) && <DateSeparator label={label} />}
-              {renderMessage(chat, idx, idx === chats.length - 1)}
-            </React.Fragment>
-          );
-        })}
-          </div>
-
-          {/* Chat Input Form */}
-         {/* Chat Input Form (conditionally rendered) */}
-{!selectedUser?.blockedBy?.includes(authUser._id) && !authUser.blockedTribes?.includes(selectedUser._id) && (
-  <div className="card-footer chat-form">
-    <form
-      id="chat-form"
-      onSubmit={handleMessageSubmit}
-      style={{ display: "flex", alignItems: "center" }}
-    >
-      <textarea
-        className="form-control"
-        placeholder="Type a message"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        style={{
-          resize: "none",
-          overflow: "hidden",
-          height: "50px",
-          flex: 1, // Allows input to take full width
-        }}
-      ></textarea>
-      <button
-        className="btn btn-primary btn-send"
-        type="submit"
-        style={{ marginLeft: "5px" }}
-      >
-        <i className="far fa-paper-plane"></i>
-      </button>
-      <button
-        type="button"
-        className="btn btn-primary btn-file"
-        onClick={() => document.getElementById("input-file").click()}
-        style={{ marginLeft: "5px" }}
-      >
-        <i className="mdi mdi-paperclip"></i>
-      </button>
-      <input type="file" id="input-file" style={{ display: "none" }} accept="*/*" />
-    </form>
-  </div>
-)}
-
         </div>
       </div>
-    </div>
-  </div>
-) : null}
 
-
-
-            {/* End Chat Box */}
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
-</div>
 
       <Script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" />
       <Script src="https://cdnjs.cloudflare.com/ajax/libs/nicescroll/3.7.6/jquery.nicescroll.min.js" />

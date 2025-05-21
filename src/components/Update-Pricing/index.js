@@ -4,6 +4,7 @@ import axios from "axios";
 import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
+import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { fetchMe } from "@/app/api";
 import "../../styles/admin_assets/css/app.min.css";
@@ -13,23 +14,37 @@ import "../../styles/admin_assets/bundles/bootstrap-tagsinput/dist/bootstrap-tag
 
 export default function PriceEditor() {
 
-    const [me, setMe] = useState(null); // <- new state for current user
-  
-    // Fetch current user on mount
-    useEffect(() => {
-      const getCurrentUser = async () => {
-        try {
-          const response = await fetchMe();
-          setMe(response); // assuming response contains user object directly
-        } catch (error) {
-          console.error("Error fetching current user:", error);
-        }
-      };
-  
-      getCurrentUser();
-    }, []);
-  
-    const isSuperAdmin = me?.level === "admin";
+  const [me, setMe] = useState(null); // <- new state for current user
+  const router = useRouter();
+  const [loading3, setLoading3] = useState(true);
+  const [loading2, setLoading2] = useState(true);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "finance")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
+
+  const isSuperAdmin = me?.level === "super" || "finance";
   // State for the Price document
   const [priceData, setPriceData] = useState({
     small: { price: 0.0, tokens: 0.0 },
@@ -44,7 +59,7 @@ export default function PriceEditor() {
       perYear: { price: 0.0, tokens: 0.0 },
     },
     Characterpertoken: 4,
-    FinalDiscount: 0.5, 
+    FinalDiscount: 0.5,
   });
 
   // Fetch the Price document on mount
@@ -78,7 +93,7 @@ export default function PriceEditor() {
       return updated;
     });
   };
-  
+
 
   // Handle update on blur for each input field.
   const handleUpdate = async () => {
@@ -94,6 +109,10 @@ export default function PriceEditor() {
     }
   };
 
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
+
   return (
     <>
       <Resources />
@@ -102,7 +121,7 @@ export default function PriceEditor() {
       <Script src="/assets/admin_assets/bundles/summernote/summernote-bs4.js" strategy="beforeInteractive" />
       <Script src="/assets/admin_assets/bundles/bootstrap-tagsinput/dist/bootstrap-tagsinput.min.js" strategy="beforeInteractive" />
       <Script src="/assets/admin_assets/js/page/create-post.js" strategy="beforeInteractive" />
-      
+
       <div id="app">
         <div className="main-wrapper main-wrapper-1">
           <div className="navbar-bg"></div>
@@ -118,6 +137,8 @@ export default function PriceEditor() {
                         <h4>Update Pricing</h4>
                       </div>
                       <div className="card-body">
+                        <h5 className="mb-4 mt-5 font-weight-bold">Token Bundles</h5>
+
                         {/* Small Bundle */}
                         <div className="form-group row mb-4">
                           <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
@@ -217,6 +238,8 @@ export default function PriceEditor() {
                             />
                           </div>
                         </div>
+                        <h5 className="mb-4 mt-5 font-weight-bold">Subscription Month Basic Plans</h5>
+
                         {/* Basic - Per Month */}
                         <div className="form-group row mb-4">
                           <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
@@ -250,6 +273,7 @@ export default function PriceEditor() {
                             />
                           </div>
                         </div>
+                        <h5 className="mb-4 mt-5 font-weight-bold">Subscription Year Basic Plans</h5>
                         {/* Basic - Per Year */}
                         <div className="form-group row mb-4">
                           <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
@@ -284,6 +308,7 @@ export default function PriceEditor() {
                           </div>
                         </div>
                         {/* Premium - Per Month */}
+                        <h5 className="mb-4 mt-5 font-weight-bold">Subscription Month Premium Plans</h5>
                         <div className="form-group row mb-4">
                           <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
                             Premium Per Month Price
@@ -316,6 +341,7 @@ export default function PriceEditor() {
                             />
                           </div>
                         </div>
+                        <h5 className="mb-4 mt-5 font-weight-bold">Subscription Year Premium Plans</h5>
                         {/* Premium - Per Year */}
                         <div className="form-group row mb-4">
                           <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
@@ -349,6 +375,7 @@ export default function PriceEditor() {
                             />
                           </div>
                         </div>
+                        <h5 className="mb-4 mt-5 font-weight-bold">Lift-Ai</h5>
                         <div className="form-group row mb-4">
                           <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
                             Character per Token
@@ -396,8 +423,8 @@ export default function PriceEditor() {
                   </div>
                 </div>
               </div> </section>
-            </div>
-          
+          </div>
+
         </div>
       </div>
     </>

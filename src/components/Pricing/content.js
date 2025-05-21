@@ -7,11 +7,11 @@ import "../../styles/admin_assets/css/app.min.css";
 import "../../styles/admin_assets/css/components.css";
 
 export default function ChatAppMerged() {
-  const router = useRouter();  // Initialize the router from next/navigation
+  const router = useRouter();
   // Local state for pricing details (fetched from API)
   const [pricing, setPricing] = useState(null);
 
-  // For the Custom Bundle, we store the user-editable price and tokens.
+  // For the Custom Bundle, start both price and tokens at 0
   const [customPrice, setCustomPrice] = useState(0);
   const [customTokens, setCustomTokens] = useState(0);
 
@@ -19,8 +19,9 @@ export default function ChatAppMerged() {
   useEffect(() => {
     async function fetchPricing() {
       try {
-        // Replace with your actual endpoint path if different
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/price/small-large-custom`);
+        const res = await axios.get(
+          `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/price/small-large-custom`
+        );
         setPricing(res.data);
       } catch (error) {
         console.error("Error fetching pricing:", error);
@@ -29,84 +30,93 @@ export default function ChatAppMerged() {
     fetchPricing();
   }, []);
 
-  // Once we have pricing, initialize custom price/tokens
-  useEffect(() => {
-    if (pricing) {
-      // Set the default from the DB
-      setCustomPrice(pricing.custom.price);     // e.g. 0.3
-      setCustomTokens(pricing.custom.tokens);   // e.g. 0
-    }
-  }, [pricing]);
-
   // Compute the ratio from the original DB data:
   // ratio = (originalPrice / originalTokens) if originalTokens != 0
   // else ratio = originalPrice if originalTokens == 0
   const ratio = useMemo(() => {
     if (!pricing) return 0;
     if (pricing.custom.tokens === 0) {
-      return pricing.custom.price; // if DB tokens=0, treat ratio as price per 1 token
+      // if DB tokens = 0, treat ratio as price per 1 token
+      return pricing.custom.price;
     }
     return pricing.custom.price / pricing.custom.tokens;
   }, [pricing]);
 
   // Handle user changing the price input
   const handleCustomPriceChange = (e) => {
-    let newPrice = parseFloat(e.target.value) || 0;
+    let input = e.target.value;
+
+    // Strip leading zeros such as "05" → "5", but allow "0" or decimals like "0.5"
+    if (/^0[1-9]/.test(input)) {
+      input = input.replace(/^0+/, "");
+    }
+
+    let newPrice = parseFloat(input) || 0;
 
     // Enforce a maximum price of $10
-    if (newPrice >= 10) {
+    if (newPrice > 10) {
       newPrice = 10;
     }
 
     setCustomPrice(newPrice);
 
-    // If ratio > 0, recalculate tokens = newPrice / ratio
+    // Recalculate tokens if ratio is valid
     if (ratio > 0) {
-      const newTokens = newPrice / ratio;
+      let newTokens = newPrice / ratio;
+
+      // Also cap tokens so that price never exceeds $10
+      if (newTokens * ratio > 10) {
+        newTokens = 10 / ratio;
+      }
+
       setCustomTokens(newTokens);
     }
   };
 
   // Handle user changing the tokens input
   const handleCustomTokensChange = (e) => {
-    const newTokens = parseFloat(e.target.value) || 0;
-    setCustomTokens(newTokens);
+    let newTokens = parseFloat(e.target.value) || 0;
 
-    // If ratio > 0, recalculate price = newTokens * ratio
+    // If ratio valid, compute corresponding price
     if (ratio > 0) {
-      const newPrice = newTokens * ratio;
+      let newPrice = newTokens * ratio;
+
+      // Cap price at $10
+      if (newPrice > 10) {
+        newPrice = 10;
+        newTokens = 10 / ratio;
+      }
+
       setCustomPrice(newPrice);
+      setCustomTokens(newTokens);
+    } else {
+      setCustomTokens(newTokens);
     }
   };
 
   // Handle Buy click and navigate to the checkout page
   const handleBuyClick = (packageType) => {
-    let price = customPrice;
-    let tokens = customTokens;
-  
+    let price, tokens;
+
     if (packageType === "small") {
-      price = pricing ? pricing.small.price : 0;
-      tokens = pricing ? pricing.small.tokens : 0;
+      price = pricing?.small.price ?? 0;
+      tokens = pricing?.small.tokens ?? 0;
     } else if (packageType === "large") {
-      price = pricing ? pricing.large.price : 0;
-      tokens = pricing ? pricing.large.tokens : 0;
+      price = pricing?.large.price ?? 0;
+      tokens = pricing?.large.tokens ?? 0;
+    } else {
+      price = customPrice;
+      tokens = customTokens;
     }
-  
-    // Build the query string
+
     const queryParams = new URLSearchParams({
       package: packageType,
       price: price.toString(),
       tokens: tokens.toString(),
     });
-  
-    // Navigate to the Checkout page with query parameters
-    const url = `/profile/checkout?${queryParams}`;
-  
-    // Use router.push with the constructed URL
-    router.push(url);
+
+    router.push(`/profile/checkout?${queryParams}`);
   };
-  
-  
 
   return (
     <>
@@ -120,9 +130,7 @@ export default function ChatAppMerged() {
                   <div className="pricing-title">Small Bundle</div>
                   <div className="pricing-padding">
                     <div className="pricing-price">
-                      <div>
-                        ${pricing ? pricing.small.price : "Loading..."}
-                      </div>
+                      <div>${pricing ? pricing.small.price : "Loading..."}</div>
                       <div>/Worth Tokens</div>
                     </div>
                     <div className="pricing-details">
@@ -150,9 +158,7 @@ export default function ChatAppMerged() {
                   <div className="pricing-title">Large Bundle</div>
                   <div className="pricing-padding">
                     <div className="pricing-price">
-                      <div>
-                        ${pricing ? pricing.large.price : "Loading..."}
-                      </div>
+                      <div>${pricing ? pricing.large.price : "Loading..."}</div>
                       <div>/Worth Tokens</div>
                     </div>
                     <div className="pricing-details">
@@ -181,13 +187,13 @@ export default function ChatAppMerged() {
                   <div className="pricing-padding">
                     <div className="pricing-price">
                       <div>
-                        {/* Show the user-editable price */}
                         <label>Price ($):</label>
                         <input
                           type="number"
                           className="form-control"
                           value={customPrice}
                           onChange={handleCustomPriceChange}
+                          onFocus={(e) => e.target.select()}
                           max="10"
                         />
                       </div>
@@ -204,6 +210,7 @@ export default function ChatAppMerged() {
                             type="number"
                             className="form-control"
                             value={customTokens}
+                            onFocus={(e) => e.target.select()}
                             onChange={handleCustomTokensChange}
                           />
                         </div>

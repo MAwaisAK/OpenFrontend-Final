@@ -9,10 +9,40 @@ import axios from "axios";
 import { TextEditor } from "./TextEditor";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import {
+  fetchMe
+} from "@/app/api";
 
 const EditCourse = () => {
   const router = useRouter();
   const { id } = useParams();
+  const [me, setMe] = useState(null); // <- new state for current user
+  const [loading3, setLoading3] = useState(true); // <- new state for current user
+  const [loading2, setLoading2] = useState(true); // <- new state for current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -29,6 +59,8 @@ const EditCourse = () => {
   const [thumbnail, setThumbnail] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [existingThumbnail, setExistingThumbnail] = useState(null);
+  const [existingFiles, setExistingFiles] = useState([]);
+  const [filesToRemove, setFilesToRemove] = useState([]);
 
   // Dynamic file inputs (up to 5)
   const [files, setFiles] = useState([null]);
@@ -41,51 +73,63 @@ const EditCourse = () => {
 
   // Fetch course details when component mounts.
   useEffect(() => {
-    if (id) {
-      axios
-        .get(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/course/${id}`)
-        .then((response) => {
-          const course = response.data;
-          setFormData({
-            title: course.title || "",
-            Author: course.Author || "",
-            AuthorLink: course.AuthorLink || "",
-            courseCategory: course.courseCategory || "Tech",
-            description: course.description || "",
-            shortdescription: course.shortdescription || "",
-            courseContent: course.courseContent || "",
-            price: course.price || "",
-          });
-          if (course.thumbnail) {
-            setExistingThumbnail(course.thumbnail);
-            setThumbnailPreview(course.thumbnail);
+    if (!id) return;
+
+    axios.get(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/course/${id}`)
+      .then(({ data: course }) => {
+        // parse any JSON‐string or use array directly
+        const parseOrEmpty = (field) => {
+          if (!field) return [];
+          if (Array.isArray(field)) return field;
+          try {
+            return JSON.parse(field);
+          } catch {
+            console.warn("Failed to parse:", field);
+            return [];
           }
-          setExternalLinks(
-            course.externalLinks && course.externalLinks.length
-              ? course.externalLinks
-              : [""]
-          );
-          setVideoLinks(
-            course.videosLinks && course.videosLinks.length
-              ? course.videosLinks
-              : [""]
-          );
-          setReferenceLinks(
-            course.referenceLinks && course.referenceLinks.length
-              ? course.referenceLinks
-              : [""]
-          );
-          setAssessmentLinks(
-            course.assessmentLinks && course.assessmentLinks.length
-              ? course.assessmentLinks
-              : [""]
-          );
-        })
-        .catch((err) => {
-          console.error("Error fetching course details:", err);
+        };
+
+        setExternalLinks(
+          parseOrEmpty(course.externalLinks).length
+            ? parseOrEmpty(course.externalLinks)
+            : [""]
+        );
+        setVideoLinks(
+          parseOrEmpty(course.videosLinks).length
+            ? parseOrEmpty(course.videosLinks)
+            : [""]
+        );
+        setReferenceLinks(
+          parseOrEmpty(course.referenceLinks).length
+            ? parseOrEmpty(course.referenceLinks)
+            : [""]
+        );
+        setAssessmentLinks(
+          parseOrEmpty(course.assessmentLinks).length
+            ? parseOrEmpty(course.assessmentLinks)
+            : [""]
+        );
+        setExistingFiles(course.files || []);
+
+        setFormData({
+          title: course.title || "",
+          Author: course.Author || "",
+          AuthorLink: course.AuthorLink || "",
+          courseCategory: course.courseCategory || "Tech",
+          description: course.description || "",
+          shortdescription: course.shortdescription || "",
+          courseContent: course.courseContent || "",
+          price: course.price || "",
         });
-    }
+
+        if (course.thumbnail) {
+          setExistingThumbnail(course.thumbnail);
+          setThumbnailPreview(course.thumbnail);
+        }
+      })
+      .catch(err => console.error(err));
   }, [id]);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -182,6 +226,11 @@ const EditCourse = () => {
       return newLinks;
     });
   };
+  const removeExistingFile = (fileUrl) => {
+    setExistingFiles((prev) => prev.filter(f => f !== fileUrl));
+    setFilesToRemove((prev) => [...prev, fileUrl]);
+  };
+
 
   const addAssessmentLink = () => {
     setAssessmentLinks((prev) => [...prev, ""]);
@@ -233,22 +282,23 @@ const EditCourse = () => {
       }
     });
 
-    data.append(
-      "externalLinks",
-      JSON.stringify(externalLinks.filter((link) => link.trim() !== ""))
-    );
-    data.append(
-      "videosLinks",
-      JSON.stringify(videosLinks.filter((link) => link.trim() !== ""))
-    );
-    data.append(
-      "referenceLinks",
-      JSON.stringify(referenceLinks.filter((link) => link.trim() !== ""))
-    );
-    data.append(
-      "assessmentLinks",
-      JSON.stringify(assessmentLinks.filter((link) => link.trim() !== ""))
-    );
+    assessmentLinks
+      .filter(link => link.trim() !== "")
+      .forEach(link => data.append("assessmentLinks", link));
+
+    referenceLinks
+      .filter(link => link.trim() !== "")
+      .forEach(link => data.append("referenceLinks", link));
+
+    externalLinks
+      .filter(link => link.trim() !== "")
+      .forEach(link => data.append("externalLinks", link));
+
+    videosLinks
+      .filter(link => link.trim() !== "")
+      .forEach(link => data.append("videosLinks", link));
+    filesToRemove.forEach(url => data.append("filesToRemove", url));
+
 
     try {
       await axios.put(
@@ -263,6 +313,10 @@ const EditCourse = () => {
       alert("Error updating course.");
     }
   };
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
+
 
   return (
     <>
@@ -441,35 +495,70 @@ const EditCourse = () => {
                           </div>
 
                           {/* Files */}
+                          {/* Files (up to 5 total) */}
                           <div className="form-group row mb-4">
                             <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
                               Files (up to 5)
                             </label>
                             <div className="col-sm-12 col-md-7">
-                              {files.map((file, index) => (
-                                <div key={index} style={{ marginBottom: "10px" }}>
+
+                              {/* 1. Existing (already-uploaded) files */}
+                              {existingFiles.map((fileUrl) => (
+                                <div
+                                  key={fileUrl}
+                                  className="d-flex align-items-center mb-2"
+                                  style={{ justifyContent: "space-between" }}
+                                >
+                                  <a
+                                    href={fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download
+                                  >
+                                    {fileUrl.split("/").pop()}
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-danger"
+                                    onClick={() => removeExistingFile(fileUrl)}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ))}
+
+                              {/* 2. New file inputs */}
+                              {files.map((_, idx) => (
+                                <div key={idx} className="mb-2 d-flex align-items-center">
                                   <input
                                     type="file"
-                                    onChange={(e) => handleIndividualFileChange(index, e)}
+                                    onChange={(e) => handleIndividualFileChange(idx, e)}
                                   />
                                   {files.length > 1 && (
                                     <button
                                       type="button"
-                                      onClick={() => removeFileInput(index)}
-                                      style={{ marginLeft: "10px" }}
+                                      className="btn btn-sm btn-link text-danger"
+                                      onClick={() => removeFileInput(idx)}
                                     >
                                       Remove
                                     </button>
                                   )}
                                 </div>
                               ))}
-                              {files.length < 5 && (
-                                <button type="button" onClick={addFileInput}>
+
+                              {/* 3. Add File button (only if total < 5) */}
+                              {existingFiles.length + files.length < 5 && (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={addFileInput}
+                                >
                                   Add File
                                 </button>
                               )}
                             </div>
                           </div>
+
 
                           {/* Video Links */}
                           <div className="form-group row mb-4">
@@ -593,6 +682,7 @@ const EditCourse = () => {
                                   )}
                                 </div>
                               ))}
+
                               <button type="button" onClick={addAssessmentLink}>
                                 Add Assessment Link
                               </button>

@@ -20,8 +20,7 @@ const Sidebar = () => {
     { path: "/profile/courses", icon: "fa fa-graduation-cap", title: "Courses" },
     { path: "/profile/chat", icon: "ti-comment", title: "Chat" },
     { path: "/profile/mytribers", icon: "ti-link", title: "My Tribers" },
-    { path: "/profile/myprofile", icon: "ti-user", title: "My Profile" },
-    { path: "/profile/settings", icon: "mdi mdi-account-check", title: "Management" },
+    { path: "/profile/settings", icon: "mdi mdi-account-check", title: "Manage Account" },
     { path: "/profile/support", icon: "mdi mdi-help-circle-outline", title: "Support" }, // Added Support tab
   ];
 

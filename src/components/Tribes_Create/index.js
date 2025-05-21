@@ -1,23 +1,54 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
-import { searchTribesUser } from "@/app/api";
+import { searchTribesUser, fetchMe } from "@/app/api";
 import Resources from "../Admin_Scripts";
 import axios from "axios";
 import { TextEditor } from "./TextEditor";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import { useRouter } from "next/navigation"; // Next.js 13+ router
 
 const CreateTribe = () => {
+  const [me, setMe] = useState(null); // <- new state for current user
+  const [loading, setLoading] = useState(true); // <- new state for current user
+  const [loading2, setLoading2] = useState(true); // <- new state for current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading]);
   const [formData, setFormData] = useState({
     title: "",
     shortDescription: "",
     longDescription: "",
     tribeCategory: "",
-   // joinPolicy: "open", // "open" or "closed"
-   // membersLimit: 0, // 0 means no limit
-   messageSettings: "all", // "all" or "admin"
+    // joinPolicy: "open", // "open" or "closed"
+    // membersLimit: 0, // 0 means no limit
+    messageSettings: "all", // "all" or "admin"
   });
   const [admins, setAdmins] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,7 +122,7 @@ const CreateTribe = () => {
     data.append("shortDescription", formData.shortDescription);
     data.append("longDescription", formData.longDescription);
     data.append("tribeCategory", formData.tribeCategory);
-   // data.append("joinPolicy", formData.joinPolicy);
+    // data.append("joinPolicy", formData.joinPolicy);
     //data.append("membersLimit", formData.membersLimit);
     data.append("messageSettings", formData.messageSettings);
     data.append("admins", JSON.stringify(admins.map(u => u._id)));
@@ -117,6 +148,9 @@ const CreateTribe = () => {
       alert("Error creating tribe.");
     }
   };
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   return (
     <>
@@ -229,74 +263,74 @@ const CreateTribe = () => {
                             </div>
                           </div>*/}
                           <div className="form-group row mb-4">
-                    <label className="col-md-3 col-form-label">Admins</label>
-                    <div className="col-md-7">
-                      {/* Selected admins */}
-                      <div className="d-flex flex-wrap mb-2">
-                        {admins.map(u => (
-                          <span
-                            key={u._id}
-                            className="badge bg-primary me-2 mb-2 d-flex align-items-center"
-                          >
-                            {u.username}
-                            <button
-                              type="button"
-                              className="btn-close btn-close-white btn-sm ms-2"
-                              onClick={() => handleRemoveAdmin(u._id)}
-                            />
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Search bar */}
-                      <div className="input-group mb-2">
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Search users..."
-                          value={searchQuery}
-                          onChange={e => setSearchQuery(e.target.value)}
-                        />
-                        <button
-                          type="button"
-                          className="btn btn-outline-secondary"
-                          onClick={handleSearch}
-                        >
-                          Search
-                        </button>
-                      </div>
-
-                      {/* Results */}
-                      {searchResults.length > 0 && (
-                        <ul className="list-group">
-                          {searchResults.map(u => (
-                            <li
-                              key={u._id}
-                              className="list-group-item d-flex justify-content-between align-items-center"
-                            >
-                              <div>
-                                <img
-                                  src={u.profile_pic}
-                                  alt=""
-                                  width={30}
-                                  height={30}
-                                  className="rounded-circle me-2"
-                                />
-                                {u.firstName} {u.lastName} ({u.username})
+                            <label className="col-md-3 col-form-label">Admins</label>
+                            <div className="col-md-7">
+                              {/* Selected admins */}
+                              <div className="d-flex flex-wrap mb-2">
+                                {admins.map(u => (
+                                  <span
+                                    key={u._id}
+                                    className="badge bg-primary me-2 mb-2 d-flex align-items-center"
+                                  >
+                                    {u.username}
+                                    <button
+                                      type="button"
+                                      className="btn-close btn-close-white btn-sm ms-2"
+                                      onClick={() => handleRemoveAdmin(u._id)}
+                                    />
+                                  </span>
+                                ))}
                               </div>
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-success"
-                                onClick={() => handleAddAdmin(u)}
-                              >
-                                Add
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
+
+                              {/* Search bar */}
+                              <div className="input-group mb-2">
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  placeholder="Search users..."
+                                  value={searchQuery}
+                                  onChange={e => setSearchQuery(e.target.value)}
+                                />
+                                <button
+                                  type="button"
+                                  className="btn btn-outline-secondary"
+                                  onClick={handleSearch}
+                                >
+                                  Search
+                                </button>
+                              </div>
+
+                              {/* Results */}
+                              {searchResults.length > 0 && (
+                                <ul className="list-group">
+                                  {searchResults.map(u => (
+                                    <li
+                                      key={u._id}
+                                      className="list-group-item d-flex justify-content-between align-items-center"
+                                    >
+                                      <div>
+                                        <img
+                                          src={u.profile_pic}
+                                          alt=""
+                                          width={30}
+                                          height={30}
+                                          className="rounded-circle me-2"
+                                        />
+                                        {u.firstName} {u.lastName} ({u.username})
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => handleAddAdmin(u)}
+                                      >
+                                        Add
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          </div>
 
                           <div className="form-group row mb-4">
                             <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">

@@ -157,7 +157,7 @@ showToast(successToastRef);
 
   return (
     <>
-      <Navbar />
+      {/*<Navbar />*/}
       <div className="container-fluid page-body-wrapper">
         <Sidebar />
         <div className="main-panel">
@@ -198,6 +198,7 @@ showToast(successToastRef);
                 <CardElement
                   options={{
                     style: { base: { fontSize: "16px", color: "#fff" } },
+                    hidePostalCode: true
                   }}
                 />
               </div>

@@ -6,12 +6,42 @@ import Script from "next/script";
 import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
-import { fetchAllCourses } from "@/app/api";
+import { useRouter } from "next/navigation";
+import { fetchAllCourses, fetchMe } from "@/app/api";
 import '../../styles/admin_assets/bundles/datatables/datatables.min.css';
 import '../../styles/admin_assets/bundles/datatables/DataTables-1.10.16/css/dataTables.bootstrap4.min.css';
 
 const Course = () => {
+  const router = useRouter();
+  const [me, setMe] = useState(null); // <- new state for current user
+  const [loading3, setLoading3] = useState(true); // <- new state for current user
+  const [loading2, setLoading2] = useState(true); // <- new state for current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
   const [course, setCourse] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCourses, setSelectedCourses] = useState([]);
 
   // Fetch course data when the component mounts
@@ -20,6 +50,7 @@ const Course = () => {
       try {
         const data = await fetchAllCourses();
         setCourse(data);
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching courses:", error);
       }
@@ -29,7 +60,7 @@ const Course = () => {
 
   // Initialize DataTables once data is loaded
   useEffect(() => {
-    if (typeof window !== "undefined" && window.$ && window.$.fn && window.$.fn.DataTable) {
+    if (!loading && typeof window !== "undefined" && window.$ && window.$.fn && window.$.fn.DataTable) {
       if (window.$.fn.DataTable.isDataTable('#table-1')) {
         window.$('#table-1').DataTable().destroy();
       }
@@ -178,6 +209,9 @@ const Course = () => {
       setSelectedCourses([]);
     }
   };
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   return (
     <>
@@ -283,7 +317,7 @@ const Course = () => {
                                   </td>
                                   <td style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                     <a
-                                      href={`/admin/courses/edit/${c._id}`}
+                                      href={`/admin/opulententrepreneurs/open/courses/edit/${c._id}`}
                                       className="btn btn-warning"
                                     >
                                       Edit

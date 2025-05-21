@@ -38,6 +38,7 @@
     "datatables.net-react": "^1.0.0",
     "draft-js": "^0.11.7",
     "draft-js-export-html": "^1.4.1",
+    "feather-icons": "^4.29.2",
     "file-saver": "^2.0.5",
     "formik": "^2.4.6",
     "jquery": "^3.7.1",

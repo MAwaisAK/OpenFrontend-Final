@@ -425,7 +425,7 @@ const UserList = () => {
               </div>
             ))
           ) : (
-            <p>No blocked users.</p>
+            <p>No blocked Tribers.</p>
           )}
         </div>
       ) : null}

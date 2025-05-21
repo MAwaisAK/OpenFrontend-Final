@@ -34,6 +34,49 @@ const Nav = () => {
       setLoading(false);
     }
   };
+useEffect(() => {
+  const iconOverlay = document.getElementById("icon-overlay");
+  if (!iconOverlay) return;
+
+  const icons = [
+    "fa-briefcase", "fa-chart-line", "fa-handshake", "fa-building",
+    "fa-coins", "fa-users", "fa-lightbulb", "fa-business-time"
+  ];
+
+  const numIcons = 50;
+
+  // Check sessionStorage
+  const cachedIcons = sessionStorage.getItem("iconPositions");
+
+  let iconDataArray;
+
+  if (cachedIcons) {
+    // Parse and use cached data
+    iconDataArray = JSON.parse(cachedIcons);
+  } else {
+    // Generate new icon data and cache it
+    iconDataArray = Array.from({ length: numIcons }).map(() => ({
+      icon: icons[Math.floor(Math.random() * icons.length)],
+      left: Math.random() * window.innerWidth,
+      top: Math.random() * window.innerHeight,
+      rotation: (Math.random() * 60) - 30 // -30 to +30 deg
+    }));
+    sessionStorage.setItem("iconPositions", JSON.stringify(iconDataArray));
+  }
+
+  // Render icons
+  iconOverlay.innerHTML = "";
+  iconDataArray.forEach((iconData) => {
+    const iEl = document.createElement("i");
+    iEl.className = `fas ${iconData.icon} static-icon`;
+    iEl.style.position = "absolute";
+    iEl.style.left = `${iconData.left}px`;
+    iEl.style.top = `${iconData.top}px`;
+    iEl.style.transform = `rotate(${iconData.rotation}deg)`;
+    iconOverlay.appendChild(iEl);
+  });
+}, []);
+
 
   useEffect(() => {
     if (user?._id) {
@@ -87,6 +130,12 @@ const Nav = () => {
   return (
     <>
       <MainResources />
+      <link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+/>
+
+      <div id="icon-overlay" />
       <nav className="navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
         <div className="text-center navbar-brand-wrapper d-flex align-items-center justify-content-start">
           <a className="navbar-brand brand-logo me-5" href="/profile">
@@ -300,6 +349,9 @@ const Nav = () => {
                 className="dropdown-menu dropdown-menu-right navbar-dropdown"
                 aria-labelledby="profileDropdown"
               >
+                <a className="dropdown-item" href="/profile/myprofile">
+                  <i className="ti-user text-primary" /> My Profile
+                </a>
                 <a className="dropdown-item" href="/profile/settings">
                   <i className="ti-settings text-primary" /> Settings
                 </a>

@@ -1,12 +1,42 @@
 // components/ManageNews.jsx
 "use client";
 import { useState, useEffect } from "react";
-import { fetchAllNews, replaceNewsSection } from "@/app/api"; 
+import { fetchAllNews, replaceNewsSection, fetchMe } from "@/app/api";
 import Sidebar from "../Admin_Sidebar";
-import Navbar  from "../Admin_Nav";
+import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
+import { useRouter } from "next/navigation";
 
 export default function ManageNews() {
+  const [me, setMe] = useState(null); // <- new state for current user
+  const router = useRouter();
+  const [loading3, setLoading3] = useState(true);
+  const [loading2, setLoading2] = useState(true);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +67,11 @@ export default function ManageNews() {
       alert("Replace failed.");
     }
   };
+
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
+
 
   return (
     <>

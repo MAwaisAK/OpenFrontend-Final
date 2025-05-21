@@ -2,12 +2,44 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Sidebar from "../Admin_Sidebar";
+import { useRouter } from "next/navigation";
 import Navbar from "../Admin_Nav";
+import { fetchMe } from "@/app/api";
 import Resources from "../Admin_Scripts";
 import "../../styles/admin_assets/css/app.min.css";
 import "../../styles/admin_assets/css/components.css";
 
 export default function TestimonialManager() {
+
+  const [me, setMe] = useState(null); // <- new state for current user
+  const router = useRouter();
+  const [loading3, setLoading3] = useState(true);
+  const [loading2, setLoading2] = useState(true);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
   // State for testimonials
   const [testimonials, setTestimonials] = useState([]);
   const [newTestimonial, setNewTestimonial] = useState({
@@ -53,13 +85,13 @@ export default function TestimonialManager() {
       formData.append("name", newTestimonial.name);
       formData.append("testimonal", newTestimonial.message);
       formData.append("img", newTestimonial.image); // Field name must match
-  
+
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/testimonals/add`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
-  
+
       setTestimonials([...testimonials, res.data]);
       resetForm();
       alert("Testimonial added successfully.");
@@ -88,7 +120,7 @@ export default function TestimonialManager() {
       const formData = new FormData();
       formData.append("name", newTestimonial.name);
       formData.append("testimonal", newTestimonial.message);
-      
+
       // Only append a new image if the user uploaded one
       if (newTestimonial.image) {
         formData.append("img", newTestimonial.image);
@@ -132,6 +164,11 @@ export default function TestimonialManager() {
     setPreview(null);
     setEditingTestimonial(null);
   };
+
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
+
 
   return (
     <>

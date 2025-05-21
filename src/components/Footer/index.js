@@ -95,7 +95,7 @@ const Footer = () => {
 
       <div className="container copyright text-center mt-4">
         <p>
-          © <span>Copyright</span> <strong className="px-1 sitename">OpEn</strong> <span>All Rights Reserved</span>
+          © <span>Copyright 2025</span> <strong className="px-1 sitename">OpEn</strong> <span>All Rights Reserved</span>
         </p>
       </div>
     </footer>

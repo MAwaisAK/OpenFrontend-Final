@@ -14,7 +14,7 @@ import { useParams, useRouter } from "next/navigation";
 
 const BASE_ENDPOINT = process.env.NEXT_PUBLIC_BASE_ENDPOINT;
 const SOCKET_ENDPOINT =
-process.env.NEXT_PUBLIC_BASE_ENDPOINT_SOCKET;
+  process.env.NEXT_PUBLIC_BASE_ENDPOINT_SOCKET;
 // Date separator component
 const DateSeparator = ({ label }) => (
   <div style={{ textAlign: 'center', margin: '10px 0' }}>
@@ -39,8 +39,24 @@ const getDateLabel = (timestamp) => {
   if (msgDate.isSame(moment().subtract(1, 'day'), 'day')) return 'Yesterday';
   return msgDate.format('MMMM D, YYYY');
 };
+
+function getFilenameFromUrl(url) {
+  try {
+    // decodeURI so “%20” → spaces etc.
+    const pathname = new URL(url).pathname;
+    const raw = decodeURIComponent(pathname.split('/').pop());
+    return raw;   // e.g. "1747789783494-…-Sid Meier's Civilization 6 [FitGirl Repack].torrent"
+  } catch {
+    return '';
+  }
+}
+function makeFallbackName() {
+  return `Download-File-${moment().format("YYYYMMDD-HHmmss")}`;
+}
+
+
 export default function ChatAppMerged() {
-  const router = useRouter(); 
+  const router = useRouter();
   const [authUser, setAuthUser] = useState(null);
   const [credentials, setCredentials] = useState({
     name: "",
@@ -54,12 +70,18 @@ export default function ChatAppMerged() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const chatContentRef = useRef(null);
-      const [page, setPage] = useState(0);
-      const [hasMore, setHasMore]   = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const fileInputRef = useRef(null);
 
   const params = useParams();
   const tribeId = params?.id; // Get tribe ID from route params
+  const [filePreviewUrl, setFilePreviewUrl] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  // ── New for Enlarging Images ──
+  const [enlargedImageUrl, setEnlargedImageUrl] = useState(null);
 
   useEffect(() => {
     // Fetch authenticated user info
@@ -88,15 +110,21 @@ export default function ChatAppMerged() {
     }
   };
 
-  const downloadFile = async (url, fileName) => {
+  const downloadFile = async (url, providedName) => {
     try {
-      const finalUrl = url.includes("firebasestorage.googleapis.com")
+      // pick providedName if it already has an extension, otherwise extract real:
+      const realName = getFilenameFromUrl(url);
+      const fileName = providedName && /\.[a-z0-9]+$/i.test(providedName)
+        ? providedName
+        : (realName || makeFallbackName());
+
+      const finalUrl = url.includes("storage.googleapis.com")
         ? `${BASE_ENDPOINT}/proxy-download?fileUrl=${encodeURIComponent(url)}`
         : url;
+
       const response = await fetch(finalUrl);
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -110,6 +138,7 @@ export default function ChatAppMerged() {
       console.error("Error downloading file:", error);
     }
   };
+
 
   useEffect(() => {
     if (tribeId && authUser) {
@@ -203,69 +232,70 @@ export default function ChatAppMerged() {
       });
 
 
-            socketConnection.on("tribeNewFileMessage", (message) => {
-              const formattedTime = moment(message.sentAt).format("hh:mm");
-              setChats((prevChats) => [
-                ...prevChats,
-                {
-                  id: message._id,
-                  text: "",
-                  from: message.from,
-                  senderId: message.senderId,
-                  time: formattedTime,
-                  seen: message.seen,
-                  timestamp: message.sentAt,
-                  senderUsername: message.senderUsername,
-                  type: "file",
-                  url: message.url,
-                  isImage: message.isImage,
-                  isVideo:
-                    message.isVideo ||
-                    (message.url && /\.(mp4|webm|ogg)$/i.test(message.url)),
-                },
-              ]);
-              if (
-                authUser &&
-                message.senderId &&
-                message.senderId !== authUser._id
-              ) {
-                if (!selectedUser || selectedUser._id !== message.senderId) {
-                  setUnseenCount((prev) => ({
-                    ...prev,
-                    [message.senderId]: (prev[message.senderId] || 0) + 1,
-                  }));
-                }
-              }
-            });
-    
+      socketConnection.on("tribeNewFileMessage", (message) => {
+        const formattedTime = moment(message.sentAt).format("hh:mm");
+        setChats((prevChats) => [
+          ...prevChats,
+          {
+            id: message._id,
+            text: "",
+            from: message.from,
+            senderId: message.senderId,
+            time: formattedTime,
+            seen: message.seen,
+            timestamp: message.sentAt,
+            senderUsername: message.senderUsername,
+            type: "file",
+            url: message.url,
+            isImage: message.isImage,
+            isVideo:
+              message.isVideo ||
+              (message.url && /\.(mp4|webm|ogg)$/i.test(message.url)),
+          },
+        ]);
+        if (
+          authUser &&
+          message.senderId &&
+          message.senderId !== authUser._id
+        ) {
+          if (!selectedUser || selectedUser._id !== message.senderId) {
+            setUnseenCount((prev) => ({
+              ...prev,
+              [message.senderId]: (prev[message.senderId] || 0) + 1,
+            }));
+          }
+        }
+      });
+
       return () => {
         socketConnection.off("newTribeMessage");
         socketConnection.off("tribeMessageDeleted");
         socketConnection.disconnect();
       };
-    }}, [authUser, credentials.room]);
-    
-  
-    const deleteTribeMessage = (messageId, deleteType, room, userId, timestamp) => {
-      socket.emit(
-        "deleteTribeMessage",
-        { messageId, deleteType, room, userId, timestamp },
-        (err) => {
-          if (err) console.error("Delete failed:", err);
-          // no local setChats here!
-        }
-      );
-    };
-  
+    }
+  }, [authUser, credentials.room]);
+
+
+  const deleteTribeMessage = (messageId, deleteType, room, userId, timestamp) => {
+    socket.emit(
+      "deleteTribeMessage",
+      { messageId, deleteType, room, userId, timestamp },
+      (err) => {
+        if (err) console.error("Delete failed:", err);
+        // no local setChats here!
+      }
+    );
+  };
+
 
   // Fetch chat history when the chat lobby is set
   useEffect(() => {
     if (credentials.room) {
       const fetchChatMessages = async () => {
         try {
-                const el = chatContentRef.current;
-      let previousHeight = 0;
-      if (el && page > 0) previousHeight = el.scrollHeight;
+          const el = chatContentRef.current;
+          let previousHeight = 0;
+          if (el && page > 0) previousHeight = el.scrollHeight;
 
           setIsLoading(true);
           const { data } = await axios.get(
@@ -293,34 +323,35 @@ export default function ChatAppMerged() {
               (msg.fileUrl && /\.(mp4|webm|ogg)$/i.test(msg.fileUrl)),
           }));
           setHasMore(data.hasMore);
-         if (page === 0) {
-          setChats(msgs);
-        } else {
-          setChats((prev) => [...msgs, ...prev]);
-          // maintain scroll position after prepending
-          setTimeout(() => {
-            if (el) {
-              el.scrollTop = el.scrollHeight - previousHeight;
-            }
-          }, 0);}
+          if (page === 0) {
+            setChats(msgs);
+          } else {
+            setChats((prev) => [...msgs, ...prev]);
+            // maintain scroll position after prepending
+            setTimeout(() => {
+              if (el) {
+                el.scrollTop = el.scrollHeight - previousHeight;
+              }
+            }, 0);
+          }
         } catch (err) {
-        console.error("Error fetching chat messages:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+          console.error("Error fetching chat messages:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
       fetchChatMessages();
     }
-  }, [credentials.room,page]);
- useEffect(() => {
+  }, [credentials.room, page]);
+  useEffect(() => {
     const el = chatContentRef.current;
     if (!el) return;
 
     const onScroll = () => {
       // if we're within 20px of the top, and not already loading, fetch more
-          if (el.scrollTop <= 20 && !isLoading && hasMore) {
-       setPage(p => p + 1);
-     }
+      if (el.scrollTop <= 20 && !isLoading && hasMore) {
+        setPage(p => p + 1);
+      }
     };
 
     el.addEventListener('scroll', onScroll);
@@ -341,14 +372,36 @@ export default function ChatAppMerged() {
         { text: input, sender: authUser._id, room: credentials.room },
         () => {
           setInput("");
-           if (chatContentRef.current) {
-          chatContentRef.current.scrollTop = chatContentRef.current.scrollHeight;
-        }
+          if (chatContentRef.current) {
+            chatContentRef.current.scrollTop = chatContentRef.current.scrollHeight;
+          }
         }
       );
     }
   };
-  
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSelectedFile(file);
+    setFilePreviewUrl(URL.createObjectURL(file));
+  };
+
+  // Called when user confirms “Send” in the preview box
+  const handleSendFile = () => {
+    if (!selectedFile) return;
+    // … your existing upload logic …
+    const fakeFileInput = { files: [selectedFile] };
+    uploadFile({ files: fakeFileInput.files }, false);
+    // cleanup state
+    setSelectedFile(null);
+    setFilePreviewUrl(null);
+
+    // **reset the file input** so it can fire change again next time
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+
 
   // File upload via jQuery AJAX.
   const uploadFile = (fileEl, isPrivate) => {
@@ -406,7 +459,7 @@ export default function ChatAppMerged() {
     if (authUser) {
       $("#input-file").on("change", function () {
         const fileEl = document.getElementById("input-file");
-        uploadFile(fileEl, false);
+        handleFileChange({ target: fileEl });
       });
       $("#private-send-file").on("change", function () {
         const fileEl = document.getElementById("private-send-file");
@@ -426,23 +479,23 @@ export default function ChatAppMerged() {
   }, [authUser, socket]);
 
   // after your other useEffects, but before the return(...)
-useEffect(() => {
-  const el = chatContentRef.current;
-  // only auto-scroll on the very first load (page 0)
-  if (el && page === 0) {
-    el.scrollTop = el.scrollHeight;
-  }
-}, [chats, page]);
+  useEffect(() => {
+    const el = chatContentRef.current;
+    // only auto-scroll on the very first load (page 0)
+    if (el && page === 0) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [chats, page]);
 
 
   const renderMessage = (chat, index, isLast) => {
     const isAdmin = tribeInfo?.admins?.includes(authUser?._id);
-const canDelete =
-  // original sender within 7min
-  (chat.senderId === credentials.userId &&
-    new Date() - new Date(chat.timestamp) < 7 * 60 * 1000) ||
-  // OR an admin at any time
-  isAdmin;
+    const canDelete =
+      // original sender within 7min
+      (chat.senderId === credentials.userId &&
+        new Date() - new Date(chat.timestamp) < 7 * 60 * 1000) ||
+      // OR an admin at any time
+      isAdmin;
 
     const showSeen = isLast && chat.from === credentials.name;
     const commonResponsiveStyle = {
@@ -466,14 +519,13 @@ const canDelete =
 
     if (chat.type === "text") {
       const showUsername =
-            index === 0 ||
-            chats[index - 1].senderUsername !== chat.senderUsername;
+        index === 0 ||
+        chats[index - 1].senderUsername !== chat.senderUsername;
       return (
         <div
           key={index}
-          className={`chat-item chat-${
-            chat.from === credentials.name ? "right" : "left"
-          }`}
+          className={`chat-item chat-${chat.from === credentials.name ? "right" : "left"
+            }`}
           style={{
             display: "flex",
             alignItems: "flex-start",
@@ -493,11 +545,11 @@ const canDelete =
           />
           <div className="chat-details">
             <div className="message-container" style={{ position: "relative", display: "inline-block" }}>
-            {showUsername && (
-              <div style={{ fontWeight: 'bold', marginBottom: '4px',fontSize:'12px' }}>
-                {chat.senderUsername}
-              </div>
-            )}
+              {showUsername && (
+                <div style={{ fontWeight: 'bold', marginBottom: '4px', fontSize: '12px' }}>
+                  {chat.senderUsername}
+                </div>
+              )}
               <div className="chat-text" style={{ padding: "8px 12px", borderRadius: "16px" }}>
                 {chat.text}
               </div>
@@ -524,7 +576,7 @@ const canDelete =
                       chat.timestamp              // timestamp
                     )
                   }
-                  
+
                   title="Delete for Everyone"
                 ></i>
               </div>
@@ -535,8 +587,8 @@ const canDelete =
     } else if (chat.type === "file") {
       const trimmedUrl = chat.url.trim();
       const showUsername =
-            index === 0 ||
-            chats[index - 1].senderUsername !== chat.senderUsername;
+        index === 0 ||
+        chats[index - 1].senderUsername !== chat.senderUsername;
       const fileUrl = /^https?:\/\//.test(trimmedUrl)
         ? trimmedUrl
         : `${BASE_ENDPOINT}/uploads/${trimmedUrl}`;
@@ -562,8 +614,8 @@ const canDelete =
             }}
           />
           <div className="chat-details">
-          {showUsername && (
-              <div style={{ fontWeight: 'bold', marginBottom: '4px',fontSize:'12px' }}>
+            {showUsername && (
+              <div style={{ fontWeight: 'bold', marginBottom: '4px', fontSize: '12px' }}>
                 {chat.senderUsername}
               </div>
             )}
@@ -576,8 +628,18 @@ const canDelete =
                   Your browser does not support the video tag.
                 </video>
               ) : (
-                <div style={{ ...commonResponsiveStyle, padding: "8px", textAlign: "center" }}>
+                <div
+                  style={{
+                    ...commonResponsiveStyle,
+                    padding: "8px",
+                    textAlign: "center"
+                  }}
+                >
                   <i className="mdi mdi-file" style={{ fontSize: "2em" }}></i>
+                  {/* ↓ new file name below icon ↓ */}
+                  <div style={{ fontSize: "0.8em", marginTop: "4px", wordBreak: "break-all" }}>
+                    {fileUrl.split("/").pop()}
+                  </div>
                 </div>
               )}
             </div>
@@ -604,7 +666,7 @@ const canDelete =
                         chat.timestamp              // timestamp
                       )
                     }
-                    
+
                     title="Delete for Everyone"
                   ></i>
                 </div>
@@ -612,20 +674,26 @@ const canDelete =
               <div className="download-icon" style={{ display: "flex", padding: "2px", borderRadius: "4px" }}>
                 <i
                   className="mdi mdi-download"
-                  style={{ cursor: "pointer", fontSize: "1.2em" }}
+                  style={{
+                    display: "flex",
+                    padding: "2px",
+                    borderRadius: "4px",
+                    marginRight: "10px", cursor: "pointer", fontSize: "1.2em"
+                  }}
                   onClick={() =>
                     downloadFile(
                       fileUrl,
                       chat.isImage
                         ? `Download-Image-${moment().format("YYYYMMDD-HHmmss")}.png`
                         : chat.isVideo
-                        ? `Download-Video-${moment().format("YYYYMMDD-HHmmss")}.mp4`
-                        : `Download-File-${moment().format("YYYYMMDD-HHmmss")}`
+                          ? `Download-Video-${moment().format("YYYYMMDD-HHmmss")}.mp4`
+                          : `Download-File-${moment().format("YYYYMMDD-HHmmss")}`
                     )
                   }
                   title="Download File"
                 ></i>
               </div>
+              <i className="mdi mdi-arrow-expand" style={{ cursor: "pointer", fontSize: "1.2em" }} onClick={() => setEnlargedImageUrl(fileUrl)} />
             </div>
           </div>
         </div>
@@ -651,16 +719,68 @@ const canDelete =
             <section className="section">
               <div className="section-body">
                 <div className="row" style={{
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  }}>
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}>
                   {/* Chat Box (Right Side) */}
-                  {(isMobile && selectedUser) ||
-                  (!isMobile && (selectedUser || credentials.room)) ? (
-                    <div className={isMobile ? "col-12" : "col-xs-12 col-sm-12 col-md-9 col-lg-9" }>
+                  {(selectedUser || credentials.room) ? (
+                    <div className={isMobile ? "col-12" : "col-xs-12 col-sm-12 col-md-9 col-lg-9"}>
                       <div className="card">
                         <div className="chat">
+                          {selectedFile && (
+
+                            <div
+                              className="file-preview-box"
+                              style={{
+                                position: "absolute",
+                                top: "50%",
+                                left: "50%",
+                                transform: "translate(-50%, -50%)",
+                                maxWidth: "90%",
+                                maxHeight: "90%",
+                                overflow: "auto",
+                                background: "#fff",
+                                padding: "1rem",
+                                borderRadius: "8px",
+                                boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                                zIndex: 20,
+                              }}
+                            >
+                              {selectedFile.type.startsWith("image/") && (
+                                <img
+                                  src={filePreviewUrl}
+                                  style={{ maxWidth: "100%", maxHeight: "60vh", objectFit: "contain", display: "block", margin: "0 auto" }}
+                                />
+                              )}
+                              {selectedFile.type.startsWith("video/") && (
+                                <video
+                                  controls
+                                  src={filePreviewUrl}
+                                  style={{ maxWidth: "100%", maxHeight: "60vh", display: "block", margin: "0 auto" }}
+                                />
+                              )}
+                              {!selectedFile.type.startsWith("image/") &&
+                                !selectedFile.type.startsWith("video/") && (
+                                  <div style={{ textAlign: "center" }}>{selectedFile.name}</div>
+                                )}
+                              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem", gap: "0.5rem" }}>
+                                <button onClick={handleSendFile} className="btn btn-sm btn-primary">
+                                  Send
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedFile(null);
+                                    setFilePreviewUrl(null);
+                                    if (fileInputRef.current) fileInputRef.current.value = "";
+                                  }}
+                                  className="btn btn-sm btn-secondary"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
                           {/* Chat Header */}
                           <div
                             className="chat-header clearfix"
@@ -713,34 +833,34 @@ const canDelete =
                               })()}
                               {/* When no user is selected, show tribe info */}
                               {!selectedUser && credentials.room && tribeInfo && (
-  <Link href={`/profile/tribes/${tribeId}`} style={{ textDecoration: "none", color: "inherit" }}>
-    <div
-      className="chat-about"
-      style={{
-        marginLeft: "10px",
-        display: "flex",
-        alignItems: "center",
-        cursor: "pointer",
-      }}
-    >
-      <img
-        src={
-          tribeInfo.thumbnail ||
-          "/assets/admin_assets/img/default-tribe.png"
-        }
-        alt="Tribe Thumbnail"
-        style={{
-          width: "40px",
-          height: "40px",
-          borderRadius: "50%",
-        }}
-      />
-      <div style={{ marginLeft: "10px" }}>
-        <div className="chat-with">{tribeInfo.title}</div>
-      </div>
-    </div>
-  </Link>
-)}
+                                <Link href={`/profile/tribes/${tribeId}`} style={{ textDecoration: "none", color: "inherit" }}>
+                                  <div
+                                    className="chat-about"
+                                    style={{
+                                      marginLeft: "10px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    <img
+                                      src={
+                                        tribeInfo.thumbnail ||
+                                        "/assets/admin_assets/img/default-tribe.png"
+                                      }
+                                      alt="Tribe Thumbnail"
+                                      style={{
+                                        width: "40px",
+                                        height: "40px",
+                                        borderRadius: "50%",
+                                      }}
+                                    />
+                                    <div style={{ marginLeft: "10px" }}>
+                                      <div className="chat-with">{tribeInfo.title}</div>
+                                    </div>
+                                  </div>
+                                </Link>
+                              )}
                               {!selectedUser && !credentials.room && (
                                 <div className="chat-about" style={{ marginLeft: "10px" }}>
                                   <div className="chat-with">Select a user to start a chat</div>
@@ -761,51 +881,52 @@ const canDelete =
                             }}
                           >
                             <div
-  className="card-body chat-content"
-  ref={chatContentRef}
-  style={{
-    flex: 1,
-    overflowY: "auto",
-    overflowX: "hidden",
-    wordBreak: "break-word", // Ensures long messages wrap properly
-  }}
->
-  {/* show banner when you've loaded at least one extra page and there’s no more to fetch */}
-  {!hasMore && page > 0 && (
-    <div
-      style={{
-        textAlign: "center",
-        padding: "10px",
-        color: "#999",
-        fontStyle: "italic",
-      }}
-    >
-      — No more messages —
-    </div>
-  )}
+                              className="card-body chat-content"
+                              ref={chatContentRef}
+                              style={{
+                                position: "relative",    // ← add positioning context
+                                flex: 1,
+                                overflowY: "auto",
+                                overflowX: "hidden",
+                                wordBreak: "break-word", // Ensures long messages wrap properly
+                              }}
+                            >
+                              {/* show banner when you've loaded at least one extra page and there’s no more to fetch */}
+                              {!hasMore && page > 0 && (
+                                <div
+                                  style={{
+                                    textAlign: "center",
+                                    padding: "10px",
+                                    color: "#999",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  — No more messages —
+                                </div>
+                              )}
 
-  {/* loading spinner/text for in-flight older-messages fetch */}
-  {isLoading && page > 0 && (
-    <div style={{ textAlign: "center", padding: "10px" }}>
-      Loading more...
-    </div>
-  )}
+                              {/* loading spinner/text for in-flight older-messages fetch */}
+                              {isLoading && page > 0 && (
+                                <div style={{ textAlign: "center", padding: "10px" }}>
+                                  Loading more...
+                                </div>
+                              )}
 
-  {/* your existing chat list */}
-  {chats.map((chat, idx) => {
-    const label = getDateLabel(chat.timestamp);
-    const prevLabel =
-      idx > 0 ? getDateLabel(chats[idx - 1].timestamp) : null;
-    return (
-      <React.Fragment key={chat.id || idx}>
-        {(idx === 0 || label !== prevLabel) && (
-          <DateSeparator label={label} />
-        )}
-        {renderMessage(chat, idx, idx === chats.length - 1)}
-      </React.Fragment>
-    );
-  })}
-</div>
+                              {/* your existing chat list */}
+                              {chats.map((chat, idx) => {
+                                const label = getDateLabel(chat.timestamp);
+                                const prevLabel =
+                                  idx > 0 ? getDateLabel(chats[idx - 1].timestamp) : null;
+                                return (
+                                  <React.Fragment key={chat.id || idx}>
+                                    {(idx === 0 || label !== prevLabel) && (
+                                      <DateSeparator label={label} />
+                                    )}
+                                    {renderMessage(chat, idx, idx === chats.length - 1)}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </div>
 
 
                             {/* Chat Input Form */}
@@ -848,9 +969,11 @@ const canDelete =
                                     <input
                                       type="file"
                                       id="input-file"
+                                      ref={fileInputRef}
                                       style={{ display: "none" }}
                                       accept="*/*"
                                     />
+
                                   </form>
                                 </div>
                               ) : (
@@ -871,6 +994,35 @@ const canDelete =
                           </div>
                         </div>
                       </div>
+                      {enlargedImageUrl && (
+                        <div
+                          className="image-lightbox-overlay"
+                          onClick={() => setEnlargedImageUrl(null)}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            backgroundColor: "rgba(0, 0, 0, 0.2)",  // ← semi-transparent black
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 999,
+                            cursor: "zoom-out",
+                          }}
+                        >
+                          <img
+                            src={enlargedImageUrl}
+                            alt="Enlarged"
+                            style={{
+                              maxWidth: "90%",
+                              maxHeight: "90%",
+                              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   ) : null}
                   {/* End Chat Box */}

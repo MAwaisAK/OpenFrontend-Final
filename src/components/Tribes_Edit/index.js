@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
-import { searchTribesUser } from "@/app/api";
+import { searchTribesUser, fetchMe } from "@/app/api";
 import axios from "axios";
 import { TextEditor } from "./TextEditor";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -15,6 +15,33 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 const EditTribe = () => {
   const { id } = useParams();
   const router = useRouter();
+  const [me, setMe] = useState(null); // <- new state for current user
+  const [loading, setLoading] = useState(true); // <- new state for current user
+  const [loading2, setLoading2] = useState(true); // <- new state for current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -119,8 +146,8 @@ const EditTribe = () => {
     );
     if (thumbnail) data.append("thumbnail", thumbnail);
     if (banner) data.append("banner", banner);
-  
-  
+
+
     try {
       await axios.put(
         `${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/my-tribes/${id}`,
@@ -134,7 +161,9 @@ const EditTribe = () => {
       alert("Error updating tribe. Please try again.");
     }
   };
-  
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   return (
     <>

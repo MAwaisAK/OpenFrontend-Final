@@ -1,5 +1,5 @@
 "use client";
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
@@ -8,17 +8,46 @@ import { TextEditor } from "./TextEditor";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import {
-  fetchToolsArray,
+  fetchToolsArray, fetchMe
 } from "@/app/api"; // Import new API functions
+import { useRouter } from "next/navigation";
 
 const CreateTool = () => {
+  const router = useRouter();
+  const [me, setMe] = useState(null); // <- new state for current user
+  const [loading3, setLoading3] = useState(true); // <- new state for current user
+  const [loading2, setLoading2] = useState(true); // <- new state for current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
   const [formData, setFormData] = useState({
     title: "",
     toolCategory: "Tech",
     description: "",
     content: "",
     externalLink: "",
-    shortdescription:"",
+    shortdescription: "",
   });
 
   const [tools, setTools] = useState([]);
@@ -38,7 +67,7 @@ const CreateTool = () => {
     fetchCategories();
   }, []);
 
-  
+
   // Thumbnail file and its preview URL.
   const [thumbnail, setThumbnail] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
@@ -97,7 +126,7 @@ const CreateTool = () => {
       const currentStyle = table.getAttribute("style") || "";
       const borderStyle = "border: 1px solid #000; border-collapse: collapse;";
       table.setAttribute("style", currentStyle + borderStyle);
-      
+
       // Also add border style to table header cells and regular cells
       table.querySelectorAll("th, td").forEach((cell) => {
         const cellCurrentStyle = cell.getAttribute("style") || "";
@@ -110,13 +139,13 @@ const CreateTool = () => {
   // On form submission, pack data into a FormData object.
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     // Inject inline table styles into description and content
     const updatedDescription = injectTableBorders(formData.description);
     const updatedContent = injectTableBorders(formData.content);
-  
+
     const data = new FormData();
-  
+
     // Append basic form fields with the updated HTML content.
     data.append("title", formData.title);
     data.append("toolCategory", formData.toolCategory);
@@ -126,12 +155,12 @@ const CreateTool = () => {
     data.append("externalLink", formData.externalLink);
     data.append("price_heading", JSON.stringify(pricePairs.map((p) => p.priceHeading)));
     data.append("price", JSON.stringify(pricePairs.map((p) => p.price)));
-  
+
     // Append the thumbnail file.
     if (thumbnail) {
       data.append("thumbnail", thumbnail);
     }
-  
+
     try {
       await axios.post(`${process.env.NEXT_PUBLIC_BASE_ENDPOINT}/tool`, data, {
         headers: {
@@ -145,8 +174,13 @@ const CreateTool = () => {
       alert("Error creating tool.");
     }
   };
-  
-  
+
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
+
+
+
   return (
     <>
       <Resources />
@@ -185,32 +219,32 @@ const CreateTool = () => {
 
                           {/* Tool Category */}
                           <div className="form-group row mb-4">
-          <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
-            Type
-          </label>
-          <div className="col-sm-12 col-md-7">
-            <select
-              className="form-control selectric"
-              name="toolCategory"
-              value={formData.toolCategory}
-              onChange={handleChange}
-            >
-              {tools && tools.length > 0 ? (
-                tools.map((tool, index) => (
-                  <option key={index} value={tool.category || tool}>
-                    {tool.category || tool}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="Tech">Tech</option>
-                  <option value="News">News</option>
-                  <option value="Political">Political</option>
-                </>
-              )}
-            </select>
-          </div>
-        </div>
+                            <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
+                              Type
+                            </label>
+                            <div className="col-sm-12 col-md-7">
+                              <select
+                                className="form-control selectric"
+                                name="toolCategory"
+                                value={formData.toolCategory}
+                                onChange={handleChange}
+                              >
+                                {tools && tools.length > 0 ? (
+                                  tools.map((tool, index) => (
+                                    <option key={index} value={tool.category || tool}>
+                                      {tool.category || tool}
+                                    </option>
+                                  ))
+                                ) : (
+                                  <>
+                                    <option value="Tech">Tech</option>
+                                    <option value="News">News</option>
+                                    <option value="Political">Political</option>
+                                  </>
+                                )}
+                              </select>
+                            </div>
+                          </div>
 
                           <div className="form-group row mb-4">
                             <label className="col-form-label text-md-right col-12 col-md-3 col-lg-3">
@@ -275,7 +309,7 @@ const CreateTool = () => {
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Heading & Details Pairs */}
                           <div className="form-group">
                             <label>Price Details</label>
@@ -290,7 +324,7 @@ const CreateTool = () => {
                             ))}
                             <button type="button" className="btn btn-primary mt-2" onClick={addPricePair}>Add Price</button>
                           </div>
-                          
+
 
                           {/* External Link */}
                           <div className="form-group row mb-4">

@@ -6,7 +6,7 @@ if (typeof window !== "undefined") {
     function (config) {
       try {
         const { origin } = new URL(config.url);
-        const allowedOrigins = [process.env.NEXT_PUBLIC_BASE_ENDPOINT];
+        const allowedOrigins = ["https://openpreneurs.business"];
         const token = localStorage.getItem("access-token");
 
         if (allowedOrigins.includes(origin) && token) {
@@ -1510,13 +1510,13 @@ export const refreshAdminToken = async (refresh_token) => {
 };
 
 // Create a new admin (super‑admin only)
-export const createAdmin = async (adminPayload, accessToken) => {
+export const createAdmin = async (adminPayload, level) => {
   try {
     const { data } = await axios.post(
       `${ADMIN_BASE}/create`,
-      adminPayload,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+      adminPayload,{
+    params: { level }
+  });
     return data;
   } catch (error) {
     console.error("Error creating admin:", error);
@@ -1525,13 +1525,13 @@ export const createAdmin = async (adminPayload, accessToken) => {
 };
 
 // Fetch all admins
-export const fetchAllAdmins = async (accessToken) => {
+export const fetchAllAdmins = async (level) => {
   try {
-    const { data } = await axios.get(
-      `${ADMIN_BASE}/`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    return data;
+     if (!level) throw new Error("Must provide level");
+  const res = await axios.get(`${ADMIN_BASE}/`, {
+    params: { level }
+  });
+  return res.data; // array of admins
   } catch (error) {
     console.error("Error fetching admins:", error);
     throw error;
@@ -1539,12 +1539,13 @@ export const fetchAllAdmins = async (accessToken) => {
 };
 
 // Update an admin's role
-export const updateAdminRole = async ({ adminId, newRole }, accessToken) => {
+export const updateAdminRole = async ({ adminId, newlevel }, level) => {
   try {
+
     const { data } = await axios.put(
       `${ADMIN_BASE}/role`,
-      { adminId, newRole },
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { adminId, newlevel },
+      { params: { level } }
     );
     return data;
   } catch (error) {
@@ -1554,12 +1555,12 @@ export const updateAdminRole = async ({ adminId, newRole }, accessToken) => {
 };
 
 // Update admin credentials (username and/or password)
-export const updateAdminCredentials = async ({ adminId, username, password }, accessToken) => {
+export const updateAdminCredentials = async ({ adminId, username, password,email },level) => {
   try {
     const { data } = await axios.put(
       `${ADMIN_BASE}/update`,
-      { adminId, username, password },
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { adminId, username, password,email },
+      { params: { level } }
     );
     return data;
   } catch (error) {
@@ -1569,11 +1570,11 @@ export const updateAdminCredentials = async ({ adminId, username, password }, ac
 };
 
 // Delete an admin
-export const deleteAdmin = async (adminId, accessToken) => {
+export const deleteAdmin = async (adminId, level) => {
   try {
     const { data } = await axios.delete(
       `${ADMIN_BASE}/${adminId}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { params: { level } }
     );
     return data;
   } catch (error) {

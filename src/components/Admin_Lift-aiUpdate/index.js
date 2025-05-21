@@ -4,10 +4,41 @@ import axios from "axios";
 import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Resources from "../Admin_Scripts";
+import { useRouter } from "next/navigation";
+import { fetchMe } from "@/app/api";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const LiftAiEditor = () => {
+  const [me, setMe] = useState(null); // <- new state for current user
+  const router = useRouter();
+  const [loading3, setLoading3] = useState(true);
+  const [loading2, setLoading2] = useState(true);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading3(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+  useEffect(() => {
+    if (!loading3) {
+      if (me && (me.level !== "super" && me.level !== "ai")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading3]);
   const [prompt, setPrompt] = useState("");
 
   // Fetch the current LiftAi prompt
@@ -45,6 +76,10 @@ const LiftAiEditor = () => {
       alert("Error saving prompt.");
     }
   };
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
+
 
   return (
     <>
@@ -71,13 +106,13 @@ const LiftAiEditor = () => {
                   <div className="form-group">
                     <label htmlFor="promptTextArea">Prompt</label>
                     <textarea
-  id="promptTextArea"
-  className="form-control"
-  value={prompt}
-  onChange={(e) => setPrompt(e.target.value)}
-  placeholder="Enter the prompt text..."
-  style={{ minHeight: "500px", height: "auto", overflowY: "auto" }}
-/>
+                      id="promptTextArea"
+                      className="form-control"
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="Enter the prompt text..."
+                      style={{ minHeight: "500px", height: "auto", overflowY: "auto" }}
+                    />
 
                   </div>
                   <div className="form-group mt-4">

@@ -6,13 +6,46 @@ import Sidebar from "../Admin_Sidebar";
 import Navbar from "../Admin_Nav";
 import Script from "next/script";
 import Resources from "../Admin_Scripts";
-import { fetchAllTribes } from "@/app/api";
+import { fetchAllTribes, fetchMe } from "@/app/api";
 import '../../styles/admin_assets/bundles/datatables/datatables.min.css';
 import '../../styles/admin_assets/bundles/datatables/DataTables-1.10.16/css/dataTables.bootstrap4.min.css';
+import { useRouter } from "next/navigation"; // Next.js 13+ router
 
 const Tribes = () => {
   const [tribes, setTribes] = useState([]);
   const [selectedTribes, setSelectedTribes] = useState([]);
+  const [me, setMe] = useState(null); // <- new state for current user
+  const [loading, setLoading] = useState(true); // <- new state for current user
+  const [loading2, setLoading2] = useState(true); // <- new state for current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetchMe();
+        setMe(response); // assuming response contains user object directly
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setLoading(false); // <- Move here to ensure it always runs after fetch
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (me && (me.level !== "super" && me.level !== "community")) {
+        router.push("/admin/opulententrepreneurs/open/dashboard");
+      } else {
+        setLoading2(false); // Only allow render when authorized
+      }
+    }
+  }, [me, loading]);
+
+
 
   // Fetch tribes data when the component mounts
   useEffect(() => {
@@ -24,7 +57,7 @@ const Tribes = () => {
             tribe.ratings?.length
               ? tribe.ratings.reduce((sum, ratingObj) => sum + ratingObj.rating, 0) / tribe.ratings.length
               : 0;
-  
+
           return {
             ...tribe,
             rating: averageRating.toFixed(1) // optional: round to 1 decimal
@@ -142,6 +175,10 @@ const Tribes = () => {
       alert("Error updating tribe status.");
     }
   };
+  if (loading2) {
+    return <div className="p-4">Loading...</div>;
+  }
+
 
   return (
     <>
